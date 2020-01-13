@@ -38,7 +38,8 @@ app.all('*', function(req, res, next) {
 //接口过滤
 app.use(function (req, res, next) {
   // 我这里把登陆和注册请求去掉了，其他的多有请求都需要进行token校验 
-  if ( req.url != '/user/login' && req.url != '/user/register') {
+  var commom = ['/user/login','/user/register','/user/adminLogin']
+  if (commom.indexOf(req.url) == -1) {
     let token = req.headers.token;
     let jwt = new JwtUtil(token);
     let result = jwt.verifyToken();

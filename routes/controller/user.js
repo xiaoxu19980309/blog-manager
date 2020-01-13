@@ -31,15 +31,55 @@ app.post('/login',(req,res) => {
                 // 将 token 返回给客户端
                 res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
             }else{
-                res.send({status:400,msg:'账号密码错误'});
+                res.send({status:500,msg:'账号密码错误'});
             }
         }else{
-            res.send({status:404,msg:'账号不存在'})
+            res.send({status:500,msg:'账号不存在'})
         }
     }).catch((err) => {
         console.log(err);
         res.send({status:500,msg:'账号密码错误'});
     })
+});
+
+//管理员登录
+app.post('/adminLogin',(req,res) => {
+  var userName = req.body.username;
+  var pass = req.body.password;
+  new Promise((resolve, reject) => {
+      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("test");
+        dbo.collection("user"). findOne({username: userName},function(err, result) { // 返回集合中所有数据
+            if(err) reject(err)
+            db.close();
+            resolve(result);
+        });
+      });
+  }).then((result) => {
+      if(result){
+          var password = result.password
+          if(pass == password && result.isadmin){
+              // 登陆成功，添加token验证
+              let _id = result._id.toString();
+              // 将用户id传入并生成token
+              let jwt = new JwtUtil(_id);
+              let token = jwt.generateToken();
+              // 将 token 返回给客户端
+              res.render('home.jade')
+              // res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
+          }else if(!result.isadmin){
+              res.send({status:500,msg:'没有管理员权限！'});
+          }else if(pass != password){
+            res.send({status: 500,msg:'密码错误！'})
+          }
+      }else{
+          res.send({status:500,msg:'账号不存在'})
+      }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'账号密码错误'});
+  })
 });
 
 //注册

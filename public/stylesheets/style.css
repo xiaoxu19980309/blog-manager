@@ -1,8 +1,55 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html{
+  height: 100%;
+}
 body {
-  padding: 50px;
+  height: 100%;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
-
+.sign {
+  height: 100%;
+  padding: 50px;
+  background-color: #f1f1f1;
+}
+.sign .main h1{
+  color: #08979c;
+  text-align: center;
+  margin-bottom: 30px;
+}
+.sign .main{
+  width: 450px;
+  margin: 80px auto 0;
+  background-color: #fff;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 50px;
+}
+.sign .main .block{
+  padding: 15px 10px;
+}
+.sign .main .block span{
+  display: inline-block;
+  width: 80px;
+  text-align: center;
+}
+.sign .main .block input{
+  height: 30px;
+  width: 200px;
+}
+.sign .main .button{
+  width: 100%;
+  background-color: #08979c;
+  color: #fff;
+  border: none;
+  text-align: center;
+  border-radius: 20px;
+  padding: 10px 10px;
+  margin-top: 15px;
+}
 a {
   color: #00B7FF;
 }
