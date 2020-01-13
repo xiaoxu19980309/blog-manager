@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var debug = require('debug')('blog-manager:server');
 var http = require('http');
+var JwtUtil = require('./utils/jwt')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -22,31 +23,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/test',test);
-app.use('/user',userApi);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
-
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+//设置跨域访问
+app.all('*', function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With,token");
+  res.header("Access-Control-Allow-Methods","PUT,POST,GET,DELETE,OPTIONS");
+  res.header("X-Powered-By",' 3.2.1')
+  res.header("Content-Type", "application/json;charset=utf-8");
+  if (req.method.toLowerCase() == 'options')
+    res.sendStatus(200);  //让options尝试请求快速结束
+  else
+    next();
 });
 //接口过滤
 app.use(function (req, res, next) {
-  // 我这里知识把登陆和注册请求去掉了，其他的多有请求都需要进行token校验 
-  if (req.url != '/user/login' && req.url != '/user/register') {
+  // 我这里把登陆和注册请求去掉了，其他的多有请求都需要进行token校验 
+  if ( req.url != '/user/login' && req.url != '/user/register') {
     let token = req.headers.token;
     let jwt = new JwtUtil(token);
     let result = jwt.verifyToken();
@@ -62,6 +54,25 @@ app.use(function (req, res, next) {
       next();
   }
 })
+app.use('/', indexRouter);
+app.use('/users', usersRouter);
+app.use('/test',test);
+app.use('/user',userApi);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  next(createError(404));
+});
+// error handler
+app.use(function(err, req, res, next) {
+  // set locals, only providing error in development
+  res.locals.message = err.message;
+  res.locals.error = req.app.get('env') === 'development' ? err : {};
+
+  // render the error page
+  res.status(err.status || 500);
+  res.render('error');
+});
 
 var port = normalizePort(process.env.PORT || '3000');
 app.set('port', port);

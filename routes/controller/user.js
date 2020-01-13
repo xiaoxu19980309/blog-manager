@@ -1,13 +1,14 @@
 // 引入jwt token工具
 const JwtUtil = require('../../utils/jwt');
+var getTime = require('../../utils/time');
 var app = require("express").Router()
 var MongoClient = require('mongodb').MongoClient;
 var url = "mongodb://localhost:27017/";
 
 // 登录
 app.post('/login',(req,res) => {
-    var userName = req.query.username;
-    var pass = req.query.password;
+    var userName = req.body.username;
+    var pass = req.body.password;
     new Promise((resolve, reject) => {
         MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
           if (err) throw err;
@@ -19,7 +20,6 @@ app.post('/login',(req,res) => {
           });
         });
     }).then((result) => {
-        console.log(result,'1111');
         if(result){
             var password = result.password
             if(pass == password){
@@ -29,7 +29,7 @@ app.post('/login',(req,res) => {
                 let jwt = new JwtUtil(_id);
                 let token = jwt.generateToken();
                 // 将 token 返回给客户端
-                res.send({status:200,msg:'登陆成功',token:token});
+                res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
             }else{
                 res.send({status:400,msg:'账号密码错误'});
             }
@@ -41,5 +41,42 @@ app.post('/login',(req,res) => {
         res.send({status:500,msg:'账号密码错误'});
     })
 });
+
+//注册
+app.post('/register',(req,res) => {
+  var username = req.body.username
+  var password = req.body.password
+  new Promise((resolve, reject) => {
+      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("test");
+        dbo.collection("user").findOne({username: username},function(err, result) { // 返回集合中所有数据
+            if(err) reject(err)
+            db.close();
+            resolve(result);
+        });
+      });
+  }).then((result) => {
+      if(result){
+          res.send({status: 500,msg: '账号已存在！'})
+      }else{
+        MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
+          if (err) throw err;
+          var dbo = db.db("test");
+          dbo.collection("user").insertOne({
+            username: username, password: password,
+            gmt_create: getTime(),gmt_modified: getTime()},function(err, result) { // 返回集合中所有数据
+            if(err) throw err
+            db.close();
+            if(result.result.ok === 1)
+              res.send({status: 200,msg: '注册成功！'})
+          });
+        });
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'账号密码错误'});
+  })
+});
+
 
 module.exports = app;
