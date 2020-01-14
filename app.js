@@ -5,9 +5,12 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var debug = require('debug')('blog-manager:server');
 var http = require('http');
+var ejs = require('ejs')
 var JwtUtil = require('./utils/jwt')
 
 var indexRouter = require('./routes/index');
+var homeRouter = require('./routes/home')
+var UserRouter = require('./routes/userManager')
 var usersRouter = require('./routes/users');
 var test = require('./routes/controller/test')
 var userApi = require('./routes/controller/user')
@@ -16,13 +19,19 @@ var app = express();
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
+app.engine('.html',ejs.__express);
+app.set('view engine', 'html');
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use('/', indexRouter);
+app.use('/home',homeRouter);
+app.use('/home/userManager',UserRouter);
+app.use('/users', usersRouter);
 //设置跨域访问
 app.all('*', function(req, res, next) {
   res.header("Access-Control-Allow-Origin", "*");
@@ -38,8 +47,7 @@ app.all('*', function(req, res, next) {
 //接口过滤
 app.use(function (req, res, next) {
   // 我这里把登陆和注册请求去掉了，其他的多有请求都需要进行token校验 
-  var commom = ['/user/login','/user/register','/user/adminLogin']
-  if (commom.indexOf(req.url) == -1) {
+  if (req.url.indexOf('/api')>=0 && req.url.indexOf('user') == -1) {
     let token = req.headers.token;
     let jwt = new JwtUtil(token);
     let result = jwt.verifyToken();
@@ -55,10 +63,8 @@ app.use(function (req, res, next) {
       next();
   }
 })
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/test',test);
-app.use('/user',userApi);
+app.use('/api/user',userApi);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -66,8 +66,9 @@ app.post('/adminLogin',(req,res) => {
               let jwt = new JwtUtil(_id);
               let token = jwt.generateToken();
               // 将 token 返回给客户端
-              res.render('home.jade')
-              // res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
+              // res.render('home.jade')
+              // res.redirect('/home')
+              res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
           }else if(!result.isadmin){
               res.send({status:500,msg:'没有管理员权限！'});
           }else if(pass != password){

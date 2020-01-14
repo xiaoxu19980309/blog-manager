@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <title><%=title%></title>
+  <link rel="stylesheet" href="/stylesheets/style.css">
+  <link rel="stylesheet" href="/stylesheets/jquery.growl.css">
+  <script src="/javascripts/jquery-1.11.3.min.js"></script>
+  <script src="/javascripts/jquery.growl.js"></script>
+  <body>
+    <div class="sign">
+      <div class="main">
+        <h1><%=header%></h1>
+        <div>
+          <div class="block">
+            <span>用户名</span>
+            <input type="text" name="username" id="username">
+          </div>
+          <div class="block">
+            <span>密码</span>
+            <input type="password" name="password" id="password">
+          </div>
+          <button onclick="login()">登录</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
+<script>
+  function login(){
+    var username = $('#username').val()
+    var password = $('#password').val()
+    if(!username || !password){
+      $.growl.warning({title: '提示', message: '用户名或密码不能为空！'})
+      return;
+    }
+    $.ajax({
+      type: 'POST',
+      url: '/api/user/adminLogin',
+      dataType: 'JSON',
+      data: {
+        username: username,
+        password: password
+      },
+      success: function(res){
+        if(res.status === 200){
+          $.growl.notice({title: '提示',message: '登陆成功！'})
+          sessionStorage.setItem('user',JSON.stringify(res.data))
+          location.href = '/home'
+        }else{
+          $.growl.error({title: '提示', message: res.msg})
+        }
+      },
+      error: function(err){
+        $.growl.error({title: '提示',message: err})
+      }
+    })
+  }
+</script>
