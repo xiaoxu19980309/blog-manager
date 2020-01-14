@@ -13,6 +13,7 @@ var homeRouter = require('./routes/home')
 var UserRouter = require('./routes/userManager')
 var usersRouter = require('./routes/users');
 var test = require('./routes/controller/test')
+var commonApi = require('./routes/controller/common')
 var userApi = require('./routes/controller/user')
 
 var app = express();
@@ -47,7 +48,7 @@ app.all('*', function(req, res, next) {
 //接口过滤
 app.use(function (req, res, next) {
   // 我这里把登陆和注册请求去掉了，其他的多有请求都需要进行token校验 
-  if (req.url.indexOf('/api')>=0 && req.url.indexOf('user') == -1) {
+  if (req.url.indexOf('/api')>=0 && req.url.indexOf('common') == -1) {
     let token = req.headers.token;
     let jwt = new JwtUtil(token);
     let result = jwt.verifyToken();
@@ -64,6 +65,7 @@ app.use(function (req, res, next) {
   }
 })
 app.use('/test',test);
+app.use('/api/common',commonApi);
 app.use('/api/user',userApi);
 
 // catch 404 and forward to error handler
