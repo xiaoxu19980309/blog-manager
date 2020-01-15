@@ -8,14 +8,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <link rel="stylesheet" href="/layui/css/layui.css">
 </head>
-<body>
+<body style="padding: 10px">
            
 <table class="layui-hide" id="test"></table>
+
 <script src="/layui/layui.js"></script>
  
 <script>
-layui.use('table', function(){
+layui.use(['table','laytpl','form','layer'], function(){
   var table = layui.table;
+  var laytpl = layui.laytpl;
+  var $ = layui.$;
+  var layer = layui.layer;
+  var form = layui.form;
   if(!sessionStorage.getItem('user')){
     layer.alert('登录过期,请重新登录！',function(){
       location.href = '/'
@@ -33,26 +38,93 @@ layui.use('table', function(){
       msgName: 'msg',
       dataName: 'data',
     }
+    // ,parseData: function(res){ //res 即为原始返回的数据
+    //   return {
+    //     "code": res.status, //解析接口状态
+    //     "msg": res.msg, //解析提示文本
+    //     "count": res.data.length, //解析数据长度
+    //     "data": res.data //解析数据列表
+    //   };
+    // }
     ,cellMinWidth: 80 //全局定义常规单元格的最小宽度，layui 2.2.1 新增
     ,cols: [[
-      {field:'_id', width:150, title: 'ID', sort: true}
+      {field:'_id', width:150, title: 'ID'}
       ,{field:'username', width:150, title: '用户名'}
-      ,{field:'gmt_create', title: '创建日期', width: '30%', minWidth: 100}
+      ,{field:'gmt_create', title: '创建日期', width: '30%', minWidth: 100,sort: true}
       ,{field:'gmt_modified', title: '最后修改日期', sort: true}
+      ,{field:'isadmin', title: '管理员权限',templet: function(d){
+        var state = ''
+        if(d.isadmin){
+          state = '<input type="checkbox" name="switch" value='+d._id+' lay-skin="switch" lay-filter="stat" class="admin" checked>'
+        }else{
+          state = '<input type="checkbox" name="switch" value='+d._id+' lay-skin="switch" lay-filter="stat" class="admin">'
+        }
+        return state
+      }}
       // ,{field:'score', title: '评分', sort: true}
       // ,{field:'classify', title: '职业'}
       // ,{field:'wealth', width:137, title: '财富', sort: true}
     ]]
     ,done: function(res,curr,count){
-      console.log(res)
       if(res.status == 403){
         layer.alert('登录过期,请重新登录！',function(){
           sessionStorage.removeItem('user')
-          location.href = '/'
+          top.location.href = '/'
         })
       }
     }
   });
+  form.on('switch(stat)',function(data){
+    var context;
+    var sta;
+    var x = data.elem.checked;
+    if(x){
+      context = '打开'
+    }else{
+      context = '关闭'
+    }
+    layer.open({
+        content: "确定"+context+'管理员权限?',
+        btn:['确定','取消'],
+        yes: function(index, layero){
+          data.elem.checked = x;
+          console.log(data.elem.checked,'111')
+          $.ajax({
+            type: "POST",
+            url: "/api/user/changePow",
+            data: {
+              id: data.value,
+              isadmin: data.elem.checked
+            },
+            headers: {
+              token: JSON.parse(sessionStorage.getItem('user')).token
+            },
+            success: function(res){
+              if(res.status == 200){
+                layer.msg(context+'成功',{icon: 1, time: 2000,});
+              }else{
+                layer.msg(context+'失败',{icon: 2, time: 2000,});
+              }
+            },
+            error: function(e){
+              layer.msg(context+'失败',{icon: 2, time: 2000,});
+            }
+          })
+          form.render();
+          layer.close(index);
+        },
+        btn2: function(index,layero){
+          data.elem.checked = !x
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          data.elem.checked = !x
+          form.render()
+        }
+      })
+      return false;
+  })
 });
 </script>
 
