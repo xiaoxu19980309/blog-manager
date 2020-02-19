@@ -10,6 +10,12 @@ body {
   height: 100%;
   font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
 }
+input{
+  border: 1px solid #dcdfe6;
+  padding: 0 15px;
+  height: 30px;
+  line-height: 30px;
+}
 .sign {
   height: 100%;
   padding: 50px;

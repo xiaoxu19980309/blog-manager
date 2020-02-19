@@ -50,7 +50,8 @@ layui.use(['table','laytpl','form','layer'], function(){
     ,cols: [[
       {field:'_id', width:150, title: 'ID'}
       ,{field:'username', width:150, title: '用户名'}
-      ,{field:'gmt_create', title: '创建日期', width: '30%', minWidth: 100,sort: true}
+      ,{field: 'nickname', width: 150, title: '昵称'}
+      ,{field:'gmt_create', title: '创建日期', minWidth: 100,sort: true}
       ,{field:'gmt_modified', title: '最后修改日期', sort: true}
       ,{field:'isadmin', title: '管理员权限',templet: function(d){
         var state = ''

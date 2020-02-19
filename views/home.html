@@ -64,7 +64,7 @@
             </dl>
           </li>
           <li class="layui-nav-item userManager"><a href="javascript:;">用户管理</a></li>
-          <li class="layui-nav-item test"><a href="javascript:;">发布商品</a></li>
+          <li class="layui-nav-item"><a href="javascript:;">发布商品</a></li>
         </ul>
       </div>
     </div>
@@ -87,9 +87,9 @@
     $('.userManager').click(function(){
       $('#mainPage').attr('src','/home/userManager')
     })
-    $('.test').click(function(){
-      $('#mainPage').attr('src','/')
-    })
+    // $('.test').click(function(){
+    //   $('#mainPage').attr('src','/')
+    // })
     $('.logout').click(function(){
       layer.alert('您已退出登录！',function(){
         sessionStorage.removeItem('user')

@@ -88,6 +88,7 @@ app.post('/adminLogin',(req,res) => {
 app.post('/register',(req,res) => {
   var username = req.body.username
   var password = req.body.password
+  var nickname = req.body.nickname
   new Promise((resolve, reject) => {
       MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
         if (err) throw err;
@@ -106,7 +107,7 @@ app.post('/register',(req,res) => {
           if (err) throw err;
           var dbo = db.db("test");
           dbo.collection("user").insertOne({
-            username: username, password: password,
+            username: username, password: password, nickname: nickname,
             gmt_create: getTime(),gmt_modified: getTime()},function(err, result) { // 返回集合中所有数据
             if(err) throw err
             db.close();

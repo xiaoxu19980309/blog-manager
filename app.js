@@ -15,6 +15,7 @@ var usersRouter = require('./routes/users');
 var test = require('./routes/controller/test')
 var commonApi = require('./routes/controller/common')
 var userApi = require('./routes/controller/user')
+var articleApi = require('./routes/controller/article')
 
 var app = express();
 
@@ -67,6 +68,7 @@ app.use(function (req, res, next) {
 app.use('/test',test);
 app.use('/api/common',commonApi);
 app.use('/api/user',userApi);
+app.use('/api/article',articleApi);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
