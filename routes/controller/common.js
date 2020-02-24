@@ -29,7 +29,7 @@ app.post('/login',(req,res) => {
                 let jwt = new JwtUtil(_id);
                 let token = jwt.generateToken();
                 // 将 token 返回给客户端
-                res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username}});
+                res.send({status:200,msg:'登陆成功',data: {token:token,username: result.username, userId: _id}});
             }else{
                 res.send({status:500,msg:'账号密码错误'});
             }
