@@ -108,16 +108,17 @@ app.post('/changePro',(req,res) => {
   })
 });
 
-//用户修改账号个人资料
+//用户修改账号基本资料
 app.post('/changeBasic',(req,res) => {
   var id = req.body.id
+  var photo = req.body.photo
   var nickname = req.body.nickname
   var phone = req.body.phone
   new Promise((resolve, reject) => {
       MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
         if (err) throw err;
         var dbo = db.db("test");
-        dbo.collection("user").updateOne({_id: objectId(id)},{$set:{nickname: nickname,phone: phone,gmt_modified: getTime()}},function(err,result){
+        dbo.collection("user").updateOne({_id: objectId(id)},{$set:{photo: photo,nickname: nickname,phone: phone,gmt_modified: getTime()}},function(err,result){
           if(err) reject(err)
           db.close();
           resolve(result.result);
@@ -131,6 +132,31 @@ app.post('/changeBasic',(req,res) => {
     }
   }).catch((err) => {
       res.send({status:500,msg:'修改失败！'});
+  })
+});
+
+//填写反馈意见
+app.post('/feedback',(req,res) => {
+  var suggestion = req.body.suggestion
+  var phone = req.body.phone
+  new Promise((resolve, reject) => {
+      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
+        if (err) throw err;
+        var dbo = db.db("test");
+        dbo.collection("feedback").insertOne({suggestion: suggestion, phone: phone,gmt_create: getTime()},function(err, result) { // 返回集合中所有数据
+            if(err) reject(err)
+            db.close();
+            resolve(result.result);
+        });
+      });
+  }).then((result) => {
+      if(result.ok === 1){
+        res.send({status: 200,msg: '反馈成功！',data: result})
+      } else {
+        res.send({status: 500,msg: '反馈失败！'})
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'反馈失败！'});
   })
 });
 

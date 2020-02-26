@@ -280,11 +280,13 @@ app.post('/insertIssue',(req,res) => {
 // 获取个人主页
 app.post('/getHomePage',(req,res) => {
   let userId = req.body.userId
+  var limit = req.body.limit? req.body.limit: 10
+  var page = req.body.page? req.body.page: 1
   new Promise((resolve, reject) => {
     MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
       if (err) throw err;
       var dbo = db.db("test");
-      dbo.collection("issues").find({userId: objectId(userId)}).toArray(function(err, result) {
+      dbo.collection("issues").find({userId: objectId(userId)}).limit(parseInt(limit)).skip((page-1)*limit).toArray(function(err, result) {
           if(err) reject(err)
           db.close();
           resolve(result);
