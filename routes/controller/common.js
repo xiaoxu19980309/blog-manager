@@ -2,23 +2,19 @@
 const JwtUtil = require('../../utils/jwt');
 var getTime = require('../../utils/time');
 var app = require("express").Router()
-var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/";
+const userModel = require('../models/userModel')
+// 导入连接模块
 
 // 登录
 app.post('/login',(req,res) => {
     var userName = req.body.username;
     var pass = req.body.password;
     new Promise((resolve, reject) => {
-        MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-          if (err) throw err;
-          var dbo = db.db("test");
-          dbo.collection("user"). findOne({username: userName},function(err, result) { // 返回集合中所有数据
-              if(err) reject(err)
-              db.close();
-              resolve(result);
-          });
-        });
+      userModel.findOne({username: userName}).then(doc => {
+        resolve(doc);
+      }).catch(e => {
+        reject(e)
+      })
     }).then((result) => {
         if(result){
             var password = result.password
@@ -47,15 +43,11 @@ app.post('/adminLogin',(req,res) => {
   var userName = req.body.username;
   var pass = req.body.password;
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user"). findOne({username: userName},function(err, result) { // 返回集合中所有数据
-            if(err) reject(err)
-            db.close();
-            resolve(result);
-        });
-      });
+      userModel.findOne({username: userName}).then(doc => {
+        resolve(doc);
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
       if(result){
           var password = result.password
@@ -90,31 +82,24 @@ app.post('/register',(req,res) => {
   var password = req.body.password
   var nickname = req.body.nickname
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user").findOne({username: username},function(err, result) { // 返回集合中所有数据
-            if(err) reject(err)
-            db.close();
-            resolve(result);
-        });
-      });
+      userModel.findOne({username: username}).then(doc => {
+        resolve(doc);
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
       if(result){
           res.send({status: 500,msg: '账号已存在！'})
       }else{
-        MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-          if (err) throw err;
-          var dbo = db.db("test");
-          dbo.collection("user").insertOne({
-            username: username, password: password, nickname: nickname,
-            gmt_create: getTime(),gmt_modified: getTime()},function(err, result) { // 返回集合中所有数据
-            if(err) throw err
-            db.close();
-            if(result.result.ok === 1)
+        userModel.create({
+          username: username, password: password, nickname: nickname,
+          gmt_create: getTime(),gmt_modified: getTime()
+        }).then(doc => {
+          if(doc)
               res.send({status: 200,msg: '注册成功！'})
-          });
-        });
+        }).catch(e => {
+
+        })
       }
   }).catch((err) => {
       res.send({status:500,msg:'账号密码错误'});

@@ -1,11 +1,6 @@
-// 引入jwt token工具
-const JwtUtil = require('../../utils/jwt');
-var getTime = require('../../utils/time');
 var multer = require('../../utils/multer')
 var path = require('path')
 var app = require("express").Router()
-var MongoClient = require('mongodb').MongoClient;
-var url = "mongodb://localhost:27017/";
 var fs = require("fs");
 
 // var uploadFileDomin = location.origin

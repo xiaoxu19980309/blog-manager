@@ -1,24 +1,20 @@
 // 引入jwt token工具
 var app = require("express").Router()
-var MongoClient = require('mongodb').MongoClient;
 var getTime = require('../../utils/time');
 var objectId = require('mongodb').ObjectId;
-var url = "mongodb://localhost:27017/";
+const userModel = require('../models/userModel')
+const feedbackModel = require('../models/feedbackModel')
 
 //管理员获取用户列表
 app.post('/getAllUsers',(req,res) => {
   var page = req.body.page;
   var limit = req.body.limit;
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user"). find({}).limit(parseInt(limit)).skip((page-1)*limit).project({password: 0}).toArray(function(err, result) { // 返回集合中所有数据
-            if(err) reject(err)
-            db.close();
-            resolve(result);
-        });
-      });
+      userModel.find({},'_id username nickname gmt_create gmt_modified isadmin').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
       if(result.length!=0){
           res.send({status:200,msg:'查询成功',data: result,count: result.length});
@@ -34,17 +30,12 @@ app.post('/getAllUsers',(req,res) => {
 app.post('/changePow',(req,res) => {
   var id = req.body.id;
   var isadmin = req.body.isadmin;
-  console.log(id,'  ',isadmin,typeof(!!!isadmin))
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user").updateOne({_id: objectId(id)},{$set:{isadmin: isadmin==='false'?false:true,gmt_modified: getTime()}},function(err,result){
-          if(err) reject(err)
-          db.close();
-          resolve(result.result);
-        })
-      });
+      userModel.updateOne({_id: objectId(id)},{$set:{isadmin: isadmin,gmt_modified: getTime()}}).then(res => {
+        resolve(res);
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
     if(result.nModified == 1){
       res.send({status:200,msg:'修改成功',data: result});
@@ -61,15 +52,11 @@ app.post('/changePow',(req,res) => {
 app.post('/getProInfo',(req,res) => {
   var id = req.body.id
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user").find({_id: objectId(id)}).project({password: 0}).toArray(function(err, result) { // 返回集合中所有数据
-            if(err) reject(err)
-            db.close();
-            resolve(result);
-        });
-      });
+      userModel.findOne({_id: objectId(id)},'nickname phone photo sex description net').then(res => {
+        resolve(res)
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
       if(result){
           res.send({status:200,msg:'查询成功',data: result});
@@ -88,17 +75,12 @@ app.post('/changePro',(req,res) => {
   var description = req.body.description;
   var net = req.body.net;
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user").updateOne({_id: objectId(id)},{$set:{sex: sex,description: description,net: net,gmt_modified: getTime()}},function(err,result){
-          if(err) reject(err)
-          db.close();
-          resolve(result.result);
-        })
-      });
+      userModel.updateOne({_id: objectId(id)},{$set:{sex: sex,description: description,net: net,gmt_modified: getTime()}},function(err, result){
+        if(err) reject(err)
+        resolve(result)
+      })
   }).then((result) => {
-    if(result.nModified == 1){
+    if(result.nModified === 1){
       res.send({status:200,msg:'修改成功',data: result});
     }else{
       res.send({status:500,msg:'修改失败',data: result});
@@ -115,17 +97,12 @@ app.post('/changeBasic',(req,res) => {
   var nickname = req.body.nickname
   var phone = req.body.phone
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("user").updateOne({_id: objectId(id)},{$set:{photo: photo,nickname: nickname,phone: phone,gmt_modified: getTime()}},function(err,result){
-          if(err) reject(err)
-          db.close();
-          resolve(result.result);
-        })
-      });
+      userModel.updateOne({_id: objectId(id)},{$set:{photo: photo,nickname: nickname,phone: phone,gmt_modified: getTime()}},function(err, result){
+        if(err) reject(err)
+        resolve(result)
+      })
   }).then((result) => {
-    if(result.nModified == 1){
+    if(result.nModified === 1){
       res.send({status:200,msg:'修改成功',data: result});
     }else{
       res.send({status:500,msg:'修改失败',data: result});
@@ -140,17 +117,13 @@ app.post('/feedback',(req,res) => {
   var suggestion = req.body.suggestion
   var phone = req.body.phone
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("feedback").insertOne({suggestion: suggestion, phone: phone,gmt_create: getTime()},function(err, result) { // 返回集合中所有数据
-            if(err) reject(err)
-            db.close();
-            resolve(result.result);
-        });
-      });
+      feedbackModel.create({suggestion: suggestion, phone: phone,gmt_create: getTime()}).then(res => {
+        resolve(res)
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
-      if(result.ok === 1){
+      if(result){
         res.send({status: 200,msg: '反馈成功！',data: result})
       } else {
         res.send({status: 500,msg: '反馈失败！'})
