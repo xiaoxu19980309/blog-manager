@@ -7,6 +7,10 @@ const userModel = require('../models/userModel')
 const issuesModel = require('../models/issuesModel')
 const LikeModel = require('../models/likesModel')
 const storeModel = require('../models/storeModel')
+const commentModel = require('../models/commentsModel')
+const mongoose = require('mongoose')
+const connection = require('../../utils/connection');
+const getSession = require('../../utils/session')
 var MongoClient = require('mongodb').MongoClient;
 var objectId = require('mongodb').ObjectId;
 var url = "mongodb://localhost:27017/";
@@ -42,38 +46,7 @@ app.post('/getCollections',(req,res) => {
   let jwt = new JwtUtil(token);
   let userId = jwt.verifyToken();
   new Promise((resolve, reject) => {
-    // MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-    //   if (err) throw err;
-    //   var dbo = db.db("test");
-    //   dbo.collection("collections").aggregate([
-    //     {
-    //       $lookup: {
-    //         from: "articles",
-    //         localField: "_id",
-    //         foreignField: "collectionId",
-    //         as: "articleList"
-    //       }
-    //     },
-    //     {
-    //       $project: {
-    //         articleList: {
-    //           $filter: {
-    //             input: "$articleList",
-    //             as: "item",
-    //             cond: { $eq: ["$$item.has_publish", false]}
-    //           }
-    //         },
-    //         name: 1,
-    //         userId: 1,
-    //       }
-    //     }
-    //   ]).toArray(function(err, result) {
-    //       if(err) reject(err)
-    //       db.close();
-    //       resolve(result);
-    //   });
-    // });
-    collectionModel.find({userId: objectId(userId)}).populate('articleList').exec(function(err,result){
+    collectionModel.find({userId: objectId(userId)}).populate({path: 'articleList', match: {'articleList.$.has_publish': false}}).exec(function(err,result){
       if(err) reject(err)
       resolve(result)
     })
@@ -113,27 +86,35 @@ app.post('/editCollection',(req,res) => {
 // 删除文集
 app.post('/deleteCollection',(req,res) => {
   var collectionId = req.body.collectionId
-  new Promise((resolve, reject) => {
-      collectionModel.remove({_id: objectId(collectionId)},function(err, result){
+  getSession().then((session)=>{
+    new Promise((resolve, reject) => {
+      collectionModel.deleteOne({_id: objectId(collectionId)},{session},function(err, result){
         if(err) reject(err)
         resolve(result);
       })
-  }).then((result) => {
-    return new Promise((resovle,reject) => {
-      articleModel.remove({collectionId: collectionId},function(err,res){
-        if(err) reject(err)
-        resovle(res)
+    }).then((result) => {
+      return new Promise((resovle,reject) => {
+        articleModel.deleteMany({collectionId: collectionId},{session},function(err,res){
+          if(err) session.abortTransaction()
+          resovle(res)
+        })
       })
+    }).then((result) => {
+      if(result.ok === 1){
+        session.commitTransaction().then(()=>{
+          session.endSession()
+        }).catch(e => {})
+        res.send({status:200,msg:'删除成功！'});
+      }else{
+        session.abortTransaction()
+        res.send({status:500,msg:'删除文集失败!'})
+      }
+    }).catch((err) => {
+        console.log(err);
+        res.send({status:500,msg:'删除文集失败!'})
     })
-  }).then((res) => {
-    if(result.ok === 1){
-      res.send({status:200,msg:'删除成功！'});
-    }else{
-      res.send({status:500,msg:'删除文集失败!'})
-    }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'删除文集失败!'})
+  }).catch(e => {
+    console.log(e)
   })
 });
 
@@ -142,29 +123,39 @@ app.post('/insertArticle',(req,res) => {
   var collectionId = req.body.collectionId
   var title = req.body.title
   var content = req.body.content
-  new Promise((resolve, reject) => {
-      articleModel.create({collectionId: objectId(collectionId),title: title,content: content, has_publish: false,
-        noReprint: false, gmt_create: getTime(), gmt_modified: getTime()}).then(res => {
+  getSession().then((session)=>{
+    new Promise((resolve, reject) => {
+      articleModel.create([{collectionId: objectId(collectionId),title: title,content: content, has_publish: false,
+        noReprint: false, gmt_create: getTime(), gmt_modified: getTime()}],{session}).then(res => {
           resolve(res)
         }).catch(e => {
           reject(e)
       })
-  }).then((result)=>{
-    return new Promise((resolve,reject) => {
-      collectionModel.updateOne({_id: objectId(collectionId)},{$push: {articleList: result._id},$set: {gmt_modified: getTime()}},function(err,res){
-        if(err) reject(err)
-        resolve(res)
+    }).then((result)=>{
+      return new Promise((resolve,reject) => {
+        collectionModel.updateOne({_id: objectId(collectionId)},{$push: {articleList: result[0]._id},$set: {gmt_modified: getTime()}},{session},function(err,res){
+          if(err) session.abortTransaction()
+          resolve(res)
+        })
       })
-    })
-  }).then((result) => {
-      if(result){
-        res.send({status:200,msg:'新建成功！'});
-      }else{
+    }).then((result) => {
+        if(result.nModified === 1){
+          session.commitTransaction().then(()=>{
+            session.endSession()
+          }).catch(e => {
+
+          })
+          res.send({status:200,msg:'新建成功！'});
+        }else{
+          session.abortTransaction()
+          res.send({status:500,msg:'新建文章失败!'})
+        }
+    }).catch((err) => {
+        console.log(err);
         res.send({status:500,msg:'新建文章失败!'})
-      }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'新建文章失败!'})
+    })
+  }).catch(e => {
+    console.log(e)
   })
 });
 
@@ -213,27 +204,27 @@ app.post('/updateArticle',(req,res) => {
 app.post('/deleteArticle',(req,res) => {
   var id = req.body.id
   var collectionId = req.body.collectionId
-  new Promise((resolve, reject) => {
-      articleModel.remove({_id: objectId(id)},function(err,result){
-        if(err) reject(err)
-        resolve(result);
-      })
-  }).then((result) => {
-    return new Promise((resolve,reject) => {
-      collectionModel.updateOne({_id: objectId(collectionId)},{$pull: {articleList: {ObjectId: result._id}}},function(err,result){
-        if(err) reject(err)
-        resolve(result)
+  getSession().then((session) => {
+    articleModel.deleteOne({_id: objectId(id)},{session},function(err,result){
+      if(err) session.abortTransaction()
+      collectionModel.updateOne({_id: objectId(collectionId)},{$pull: {articleList:  objectId(id)}},{session},function(err,result2){
+        if(err) {
+          session.abortTransaction()
+          res.send({status:500,msg:"删除失败！"})
+        }
+        if(result2.nModified === 1){
+          session.commitTransaction().then(()=>{
+            session.endSession();
+          })
+          res.send({status:200,msg:'删除成功！'});
+        }else{
+          session.abortTransaction()
+          res.send({status:500,msg:"删除失败！"})
+        }
       })
     })
-  }).then((result) => {
-      if(result.ok === 1){
-        res.send({status:200,msg:'删除成功！'});
-      }else{
-        res.send({status:500,msg:'删除文章失败!'})
-      }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'删除文章失败!'})
+  }).catch(e => {
+    console.log(e)
   })
 });
 
@@ -245,28 +236,38 @@ app.post('/insertIssue',(req,res) => {
   var id = req.body.articleId
   var title = req.body.title
   var content = req.body.content
-  new Promise((resolve, reject) => {
-      issuesModel.create({userId: objectId(userId),title: title,content: content, noReprint: false, gmt_create: getTime(), gmt_modified: getTime()}).then(res => {
+  var content_text = req.body.content_text
+  getSession().then((session) => {
+    new Promise((resolve, reject) => {
+      issuesModel.create([{userId: objectId(userId),title: title,content: content,content_text:content_text, noReprint: false, gmt_create: getTime(), 
+        gmt_modified: getTime()}],{session}).then(res => {
         resolve(res);
       }).catch(e => {
         reject(e)
       })
-  }).then(() => {
-    return new Promise((resolve, reject) => {
-      articleModel.updateOne({_id: objectId(id)},{$set: {has_publish: true, gmt_modified: getTime()}},function(err,result){
-        if(err) reject(err)
-        resolve(result);
+    }).then(() => {
+      return new Promise((resolve, reject) => {
+        articleModel.updateOne({_id: objectId(id)},{$set: {has_publish: true, gmt_modified: getTime()}},{session},function(err,result){
+          if(err) session.abortTransaction()
+          resolve(result);
+        })
       })
+    }).then((result) => {
+      if(result.nModified === 1){
+        session.commitTransaction().then(()=>{
+          session.endSession()
+        }).catch(e => {})
+        res.send({status:200,msg:'发布成功！'});
+      }else{
+        session.abortTransaction()
+        res.send({status:500,msg:'发布文章失败!'})
+      }
+    }).catch((err) => {
+        console.log(err);
+        res.send({status:500,msg:'发布文章失败!'})
     })
-  }).then((result) => {
-    if(result.nModified === 1){
-      res.send({status:200,msg:'发布成功！'});
-    }else{
-      res.send({status:500,msg:'发布文章失败!'})
-    }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'发布文章失败!'})
+  }).catch(e => {
+    console.log(e)
   })
 });
 
@@ -297,53 +298,13 @@ app.post('/getHomePage',(req,res) => {
 app.post('/getArticle',(req,res) => {
   let articleId = req.body.articleId
   new Promise((resolve, reject) => {
-    MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-      if (err) throw err;
-      var dbo = db.db("test");
-      dbo.collection("issues").aggregate([
-        {
-          $lookup: {
-            from: "comments",
-            localField: "userId",
-            foreignField: "userId",
-            as: "commentList"
-          }
-        },
-        {
-          $lookup: {
-            from: "user",
-            localField: "userId",
-            foreignField: "_id",
-            as: "user"
-          }
-        },
-        // {
-        //   $lookup: {
-        //     from: "user",
-        //     localField: "commentList.userId",
-        //     foreignField: "_id",
-        //     as: "comment_user"
-        //   }
-        // },
-        {
-          $match: {
-            _id: objectId(articleId)
-          }
-        },
-        {
-          $project: {
-            "user.password": 0,
-          }
-        },
-      ]).toArray(function(err, result) {
-          if(err) reject(err)
-          db.close();
-          resolve(result);
-      });
-    });
+    issuesModel.findOne({_id: objectId(articleId)}).populate('userId','nickname photo').exec(function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
   }).then((result) => {
     if(result){
-      res.send({status:200,msg:'获取成功！',data: result[0]});
+      res.send({status:200,msg:'获取成功！',data: result});
     }else{
       res.send({status:500,msg:'获取失败!'})
     }
@@ -357,34 +318,10 @@ app.post('/getArticle',(req,res) => {
 app.post('/getComments',(req,res) => {
   let articleId = req.body.articleId
   new Promise((resolve, reject) => {
-    MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-      if (err) throw err;
-      var dbo = db.db("test");
-      dbo.collection("comments").aggregate([
-        {
-          $lookup: {
-            from: "user",
-            localField: "userId",
-            foreignField: "_id",
-            as: "user"
-          }
-        },
-        {
-          $match: {
-            articleId: objectId(articleId)
-          }
-        },
-        {
-          $project: {
-            "user.password": 0,
-          }
-        },
-      ]).toArray(function(err, result) {
-          if(err) reject(err)
-          db.close();
-          resolve(result);
-      });
-    });
+    commentModel.find({articleId: objectId(articleId)}).populate({path: 'userId',select: 'nickname photo'}).populate('replyList.userId','nickname photo').exec(function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
   }).then((result) => {
     if(result){
       res.send({status:200,msg:'获取成功！',data: result});
@@ -403,18 +340,14 @@ app.post('/insertComment',(req,res) => {
   var articleId = req.body.articleId
   var content = req.body.content
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("comments").insertOne({articleId: objectId(articleId),userId: objectId(userId),content: content,
-          gmt_create: getTime(), gmt_modified: getTime()},function(err,result){
-            if(err) reject(err)
-            db.close();
-            resolve(result.result);
-        });
-      });
+    commentModel.create({articleId: objectId(articleId),userId: objectId(userId),content: content, replyList: [],
+      gmt_create: getTime(), gmt_modified: getTime()}).then(res => {
+        resolve(res)
+      }).catch(e => {
+        reject(e)
+      })
   }).then((result) => {
-      if(result.ok === 1){
+      if(result){
         res.send({status:200,msg:'评论成功！'});
       }else{
         res.send({status:500,msg:'评论失败!'})
@@ -425,22 +358,43 @@ app.post('/insertComment',(req,res) => {
   })
 });
 
+// 发表回复
+app.post('/insertReply',(req,res) => {
+  var commentId = req.body.commentId
+  var userId = req.body.userId
+  var content = req.body.content
+  new Promise((resolve, reject) => {
+    commentModel.updateOne({_id: objectId(commentId)},{$push: {replyList: {
+      userId: objectId(userId),
+      content: content,
+      gmt_create: getTime(),
+    }},$set: {gmt_modified: getTime()}},function(err,res){
+      if(err) reject(err)
+      resolve(res)
+    })
+  }).then((result) => {
+      if(result){
+        res.send({status:200,msg:'回复成功！'});
+      }else{
+        res.send({status:500,msg:'回复失败!'})
+      }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'回复失败!'})
+  })
+});
+
 
 // 删除评论
 app.post('/deleteComment',(req,res) => {
   var id = req.body.id
   new Promise((resolve, reject) => {
-      MongoClient.connect(url, { useNewUrlParser: true,useUnifiedTopology: true }, function(err, db) {
-        if (err) throw err;
-        var dbo = db.db("test");
-        dbo.collection("comments").remove({_id: objectId(id)},function(err,result){
-            if(err) reject(err)
-            db.close();
-            resolve(result.result);
-        });
-      });
+    commentModel.deleteOne({_id: objectId(id)},function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
   }).then((result) => {
-      if(result.ok === 1){
+      if(result){
         res.send({status:200,msg:'删除成功！'});
       }else{
         res.send({status:500,msg:'删除评论失败!'})
@@ -448,6 +402,28 @@ app.post('/deleteComment',(req,res) => {
   }).catch((err) => {
       console.log(err);
       res.send({status:500,msg:'删除评论失败!'})
+  })
+});
+
+// 删除回复
+app.post('/deleteReply',(req,res) => {
+  var commentId = req.body.commentId
+  var replyId = req.body.replyId
+  new Promise((resolve, reject) => {
+    commentModel.updateOne({_id: objectId(commentId)},{$pull: {replyList: {_id: objectId(replyId)}}},function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result) => {
+    console.log(result)
+      if(result.nModified === 1){
+        res.send({status:200,msg:'删除成功！'});
+      }else{
+        res.send({status:500,msg:'删除回复失败!'})
+      }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'删除回复失败!'})
   })
 });
 
