@@ -16,6 +16,7 @@ let issuesSchema = new mongoose.Schema({
     type: Schema.Types.ObjectId, ref: 'likes'
   }],
   likesCount: Number,
+  commentsCount: Number,
   noReprint: Boolean,
   gmt_create: String,
   gmt_modified: String
