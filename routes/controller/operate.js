@@ -177,19 +177,79 @@ app.post('/getStores',(req,res) => {
 app.post('/deleteStore',(req,res) => {
   var id = req.body.id
   new Promise((resolve, reject) => {
-      storeModel.remove({_id: objectId(id)},function(err,res){
+    storeModel.remove({_id: objectId(id)},function(err,res){
+      if(err) reject(err)
+      resolve(res)
+    })
+  }).then((result) => {
+    if(result.ok === 1){
+      res.send({status:200,msg:'取消成功！'});
+    }else{
+      res.send({status:500,msg:'取消失败!'})
+    }
+  }).catch((err) => {
+    console.log(err);
+    res.send({status:500,msg:'取消失败!'})
+  })
+});
+
+//获取统计数据
+app.post('/staticNum',(req,res) => {
+  var id = req.body.userId
+  var param = {
+    textCount: 0, // 文字数
+    likeCount: 0,  // 收到的喜欢
+    number: 0, // 文章数
+  }
+  new Promise((resolve,reject)=>{
+    issuesModel.find({userId: objectId(id)},function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
+  }).then(result => {
+    if(result){
+      param.number = result.length
+      result.forEach(element => {
+        param.textCount += element.content_text.length
+        param.likeCount += element.likesList.length
+      });
+      res.send({status:200,msg:'获取成功！',data:param})
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch(e => {
+    console.log(e)
+  })
+})
+
+// 获取喜欢文章列表
+app.post('/getLikeList',(req,res) => {
+  var userId = req.body.userId
+  var type = req.body.type
+  var limit = req.body.limit? req.body.limit : 10
+  var page = req.body.page? req.body.page : 1
+  new Promise((resolve, reject) => {
+      LikeModel.find({userId: objectId(userId)}).populate('userId','nickname photo ').populate('articleId','content_text title gmt_create commentList likesList')
+      .limit(parseInt(limit)).skip((page-1)*limit)
+      .exec((err,doc) => {
         if(err) reject(err)
-        resolve(res)
+        resolve(doc);
       })
   }).then((result) => {
-      if(result.ok === 1){
-        res.send({status:200,msg:'取消成功！'});
-      }else{
-        res.send({status:500,msg:'取消失败!'})
-      }
+    if(result){
+      result.forEach(element => {
+        element.articleId.likesCount = element.articleId.likesList.length
+        element.articleId.commentsCount = element.articleId.commentList.length
+        element.articleId.likesList = []
+        element.articleId.commentList = []
+      })
+      res.send({status:200,msg:'获取成功！',data: result});
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
   }).catch((err) => {
       console.log(err);
-      res.send({status:500,msg:'取消失败!'})
+      res.send({status:500,msg:'查找失败!'})
   })
 });
 

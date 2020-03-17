@@ -269,22 +269,80 @@ app.post('/getHomePage',(req,res) => {
   let userId = req.body.userId
   var limit = req.body.limit? req.body.limit: 10
   var page = req.body.page? req.body.page: 1
-  new Promise((resolve, reject) => {
-    issuesModel.find({userId: objectId(userId)}).limit(parseInt(limit)).skip((page-1)*limit).then(res => {
-      resolve(res);
-    }).catch(e => {
-      reject(e)
+  let type = req.body.type
+  if(type == 1){
+    new Promise((resolve, reject) => {
+      issuesModel.find({userId: objectId(userId)}).limit(parseInt(limit)).skip((page-1)*limit).sort({gmt_create: -1}).then(res => {
+        resolve(res);
+      }).catch(e => {
+        reject(e)
+      })
+    }).then((result) => {
+      if(result){
+        result.forEach(element => {
+          element.likesCount = element.likesList.length
+          element.commentsCount = element.commentList.length
+          element.likesList = []
+          element.commentList = []
+        })
+        res.send({status:200,msg:'获取成功！',data: result});
+      }else{
+        res.send({status:500,msg:'获取失败!'})
+      }
+    }).catch((err) => {
+        console.log(err);
+        res.send({status:500,msg:'获取失败!'})
     })
-  }).then((result) => {
-    if(result){
-      res.send({status:200,msg:'获取成功！',data: result});
-    }else{
-      res.send({status:500,msg:'获取失败!'})
+  } else if (type == 2) {
+    new Promise((resolve, reject) => {
+      commentModel.find({userId: objectId(userId)}).limit(parseInt(limit))
+        .skip((page-1)*limit).sort({gmt_create: -1})
+        .populate('userId','nickname photo').populate('articleId')
+        .then(res => {
+          resolve(res);
+        }).catch(e => {
+          reject(e)
+        })
+      }).then((result) => {
+        if(result){
+          result.forEach(element => {
+            element.articleId.likesCount = element.articleId.likesList.length
+            element.articleId.commentsCount = element.articleId.commentList.length
+            element.articleId.likesList = []
+            element.articleId.commentList = []
+          })
+          res.send({status:200,msg:'获取成功！',data: result});
+        }else{
+          res.send({status:500,msg:'获取失败!'})
+        }
+      }).catch((err) => {
+        console.log(err);
+        res.send({status:500,msg:'获取失败!'})
+    })
+  } else if(type == 3) {
+    new Promise((resolve, reject) => {
+      issuesModel.find({userId: objectId(userId)}).limit(parseInt(limit)).skip((page-1)*limit).sort({gmt_modified: -1}).then(res => {
+          resolve(res);
+        }).catch(e => {
+          reject(e)
+        })
+      }).then((result) => {
+        if(result){
+          result.forEach(element => {
+            element.likesCount = element.likesList.length
+            element.commentsCount = element.commentList.length
+            element.likesList = []
+            element.commentList = []
+          })
+          res.send({status:200,msg:'获取成功！',data: result});
+        }else{
+          res.send({status:500,msg:'获取失败!'})
+        }
+      }).catch((err) => {
+          console.log(err);
+          res.send({status:500,msg:'获取失败!'})
+      })
     }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'获取失败!'})
-  })
 });
 
 //获取文章内容

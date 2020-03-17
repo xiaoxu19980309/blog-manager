@@ -4,6 +4,7 @@ var objectId = require('mongodb').ObjectId;
 
 let commentSchema = new mongoose.Schema({
   userId: {type: Schema.Types.ObjectId,ref: 'users'},
+  articleId: {type: Schema.Types.ObjectId, ref: 'issues'},
   content: String,
   replyList: [{
     userId: {type: Schema.Types.ObjectId,ref: 'users'},
