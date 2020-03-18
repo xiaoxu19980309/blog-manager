@@ -55,6 +55,28 @@ app.post('/getCollections',(req,res) => {
   })
 });
 
+//获取文集详情
+app.post('/getCollectionDetail',(req,res) => {
+  let cid = req.body.cid
+  new Promise((resolve, reject) => {
+    collectionModel.findOne({_id: objectId(cid)}).populate({path: 'articleList', match: {'has_publish': true}})
+    .populate('userId','nickname photo')
+    .exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result) => {
+    if(result){
+      res.send({status:200,msg:'获取成功！',data: result});
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'获取失败!'})
+  })
+});
+
 // 修改文集
 app.post('/editCollection',(req,res) => {
   var collectionName = req.body.name
@@ -116,9 +138,10 @@ app.post('/insertArticle',(req,res) => {
   var collectionId = req.body.collectionId
   var title = req.body.title
   var content = req.body.content
+  var content_text = req.body.content_text
   getSession().then((session)=>{
     new Promise((resolve, reject) => {
-      articleModel.create([{collectionId: objectId(collectionId),title: title,content: content, has_publish: false,
+      articleModel.create([{collectionId: objectId(collectionId),title: title,content: content,content_text: content_text, has_publish: false,
         noReprint: false, gmt_create: getTime(), gmt_modified: getTime()}],{session}).then(res => {
           resolve(res)
         }).catch(e => {

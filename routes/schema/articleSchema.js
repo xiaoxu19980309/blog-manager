@@ -6,6 +6,7 @@ let articleSchema = new mongoose.Schema({
   collectionId: {type: Schema.Types.ObjectId,ref: 'collections'},
   title: String,
   content: String,
+  content_text: String,
   has_publish: Boolean,
   noReprint: Boolean,
   gmt_create: String,
