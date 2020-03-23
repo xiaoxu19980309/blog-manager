@@ -2,10 +2,10 @@ var getTime = require('../../utils/time');
 var app = require("express").Router()
 var objectId = require('mongodb').ObjectId;
 const getSession = require('../../utils/session')
+const userModel = require('../models/userModel')
 const issuesModel = require('../models/issuesModel')
 const LikeModel = require('../models/likesModel')
 const storeModel = require('../models/storeModel')
-
 
 // 喜欢文章
 app.post('/insertLikes',(req,res) => {
@@ -50,6 +50,22 @@ app.post('/getLikes',(req,res) => {
         if(err) reject(err)
         resolve(result)
       })
+  }).then((result) => {
+    res.send({status:200,msg:'查找成功！', data: result});
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'查找失败!'})
+  })
+});
+
+//获取收到喜欢列表
+app.post('/getLikedList',(req,res) => {
+  var userId = req.body.userId
+  new Promise((resolve, reject) => {
+    issuesModel.find({userId: objectId(userId)}).populate({path: 'likesList',match: {status: 1},populate:{path: 'userId', select: 'nickname photo'}}).exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
   }).then((result) => {
     res.send({status:200,msg:'查找成功！', data: result});
   }).catch((err) => {
@@ -200,6 +216,8 @@ app.post('/staticNum',(req,res) => {
     textCount: 0, // 文字数
     likeCount: 0,  // 收到的喜欢
     number: 0, // 文章数
+    focusCount: 0,
+    fansCount: 0
   }
   new Promise((resolve,reject)=>{
     issuesModel.find({userId: objectId(id)},function(err,doc){
@@ -213,12 +231,19 @@ app.post('/staticNum',(req,res) => {
         param.textCount += element.content_text.length
         param.likeCount += element.likesList.length
       });
-      res.send({status:200,msg:'获取成功！',data:param})
-    }else{
-      res.send({status:500,msg:'获取失败!'})
     }
-  }).catch(e => {
-    console.log(e)
+    userModel.findOne({_id: objectId(id)},function(err,doc){
+      if(err) res.send({status:200,msg:'获取失败！'})
+      if(doc) {
+        param.focusCount = doc.focusList.length
+        param.fansCount = doc.fansList.length
+        res.send({status:200,msg:'获取成功！',data: param})
+      }else {
+        res.send({status:200,msg:'获取失败！'})
+      }
+    })
+  }).catch(err => {
+    console.log(err)
   })
 })
 

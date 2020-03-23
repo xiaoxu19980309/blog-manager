@@ -3,6 +3,7 @@ const JwtUtil = require('../../utils/jwt');
 var getTime = require('../../utils/time');
 var app = require("express").Router()
 const userModel = require('../models/userModel')
+const issuesModel = require('../models/issuesModel')
 // 导入连接模块
 
 // 登录
@@ -105,5 +106,31 @@ app.post('/register',(req,res) => {
       res.send({status:500,msg:'账号密码错误'});
   })
 });
+
+//获取首页发现
+app.post('/find',(req,res) => {
+  var limit = req.body.limit? req.body.limit : 10
+  var page = req.body.page? req.body.page : 1
+  new Promise((resolve,reject)=>{
+    issuesModel.find({}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).exec(function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
+  }).then(result => {
+    if(result){
+      result.forEach(element => {
+        element.commentsCount = element.commentList.length
+        element.likesCount = element.likesList.length
+        element.commentList = []
+        element.likesList = []
+      });
+      res.send({status:200,msg:'获取成功！',data:result})
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch(e => {
+    console.log(e)
+  })
+})
 
 module.exports = app;

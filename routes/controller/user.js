@@ -4,6 +4,7 @@ var getTime = require('../../utils/time');
 var objectId = require('mongodb').ObjectId;
 const userModel = require('../models/userModel')
 const feedbackModel = require('../models/feedbackModel')
+const getSession = require('../../utils/session')
 
 //管理员获取用户列表
 app.post('/getAllUsers',(req,res) => {
@@ -132,5 +133,120 @@ app.post('/feedback',(req,res) => {
       res.send({status:500,msg:'反馈失败！'});
   })
 });
+
+//管理员获取用户列表
+app.post('/getUserByName',(req,res) => {
+  var name = req.body.name
+  var limit = req.body.limit? req.body.limit : 10
+  var page = req.body.page? req.body.page : 1
+  let reg = new RegExp(name, 'i')
+  new Promise((resolve, reject) => {
+      userModel.find({$or: [{nickname: {$regex: reg}},{isadmin: false}]},'_id nickname photo gmt_create gmt_modified fansList')
+      .limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
+  }).then((result) => {
+      if(result.length!=0){
+          res.send({status:200,msg:'查询成功',data: result,count: result.length});
+      }else if(result.length == 0){
+          res.send({status:200,msg:'没有用户！'});
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！'});
+  })
+});
+
+//管理员获取用户列表
+app.post('/getFocusList',(req,res) => {
+  var id = req.body.userId
+  new Promise((resolve, reject) => {
+      userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+      .populate('focusList','nickname photo')
+      .then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
+  }).then((result) => {
+      if(result.length!=0){
+          res.send({status:200,msg:'查询成功',data: result,count: result.length});
+      }else if(result.length == 0){
+          res.send({status:200,msg:'没有用户！'});
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！'});
+  })
+});
+
+//关注用户
+app.post('/focusUser',(req,res)=>{
+  var userId = req.body.userId
+  var focusId = req.body.focusId
+  getSession().then((session)=>{
+    new Promise((resolve,reject) => {
+      userModel.updateOne({_id: objectId(userId)},{$push: {focusList: objectId(focusId)},$set: {gmt_modified: getTime()}},{session}).then(doc => {
+        resolve(doc)
+      }).catch(e => {
+        reject(e)
+      })
+    }).then(doc => {
+      if(doc.nModified === 1) {
+        userModel.updateOne({_id: objectId(focusId)},{$push: {fansList: objectId(userId)},$set: {gmt_modified: getTime()}},{session},function(err,doc2){
+          if(err) session.abortTransaction()
+          if (doc2.nModified === 1) {
+            res.send({status:200,msg:'关注成功！'});
+            session.commitTransaction().then(()=>{
+              session.endSession()
+            }).catch(e => {})
+          } else {
+            res.send({status:500,msg:'关注失败!'})
+            session.abortTransaction()
+          }
+        })
+      }else {
+        res.send({status:500,msg:'关注失败!'})
+      }
+    }).catch(err => {
+      console.log(err)
+    })
+  }).catch(e => {
+    console.log(e)
+  })
+})
+
+//取消关注
+app.post('/cancelFocusUser',(req,res)=>{
+  var userId = req.body.userId
+  var focusId = req.body.focusId
+  getSession().then((session) => {
+    new Promise((resolve,reject)=>{
+      userModel.updateOne({_id: objectId(userId)},{$pull: {focusList: objectId(focusId)},$set: {gmt_modified: getTime()}},{session})
+      .then(res => {
+        resolve(res)
+      }).catch(e => {
+        reject(e)
+      })
+    }).then(doc => {
+      userModel.updateOne({_id: objectId(focusId)},{$pull: {fansList: objectId(userId)},$set: {gmt_modified: getTime()}},{session})
+      .then(doc2 => {
+        if(doc2.nModified === 1){
+          res.send({status:200,msg:'取消关注成功！'});
+          session.commitTransaction(()=>{
+            session.endSession()
+          })
+        }else{
+          session.abortTransaction()
+          res.send({status:500,msg:'取消关注失败!'})
+        }
+      }).catch(e => {
+
+      })
+    }).catch(e => {
+      console.log(e)
+    })
+  })
+})
 
 module.exports = app;

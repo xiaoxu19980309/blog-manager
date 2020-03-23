@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema
 
 let userSchema = new mongoose.Schema({
   username: String,
@@ -10,6 +11,8 @@ let userSchema = new mongoose.Schema({
   sex: Number,
   phone: String,
   photo: String,
+  focusList: [{type: Schema.Types.ObjectId, ref: 'users'}],
+  fansList: [{type:Schema.Types.ObjectId, ref: 'users'}],
   gmt_create: String,
   gmt_modified: String,
 },{versionKey: false})
