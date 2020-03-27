@@ -134,14 +134,15 @@ app.post('/feedback',(req,res) => {
   })
 });
 
-//管理员获取用户列表
+//根据搜索用户
 app.post('/getUserByName',(req,res) => {
   var name = req.body.name
   var limit = req.body.limit? req.body.limit : 10
   var page = req.body.page? req.body.page : 1
   let reg = new RegExp(name, 'i')
   new Promise((resolve, reject) => {
-      userModel.find({$or: [{nickname: {$regex: reg}},{isadmin: false}]},'_id nickname photo gmt_create gmt_modified fansList')
+      userModel.find({$or: [{nickname: {$regex: reg}},{isadmin: false}]},'_id nickname photo fansList focusList articleList')
+      .populate({path: 'articleList'})
       .limit(parseInt(limit)).skip((page-1)*limit).then(result => {
         resolve(result);
       }).catch(e => {
@@ -158,17 +159,18 @@ app.post('/getUserByName',(req,res) => {
   })
 });
 
-//管理员获取用户列表
+//获取关注用户列表
 app.post('/getFocusList',(req,res) => {
   var id = req.body.userId
   new Promise((resolve, reject) => {
-      userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
-      .populate('focusList','nickname photo')
-      .then(result => {
-        resolve(result);
-      }).catch(e => {
-        reject(e)
-      })
+    userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+    .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList'}})
+    .populate('fansList','nickname photo articleList fansList focusList')
+    .then(result => {
+      resolve(result);
+    }).catch(e => {
+      reject(e)
+    })
   }).then((result) => {
       if(result.length!=0){
           res.send({status:200,msg:'查询成功',data: result,count: result.length});
@@ -248,5 +250,28 @@ app.post('/cancelFocusUser',(req,res)=>{
     })
   })
 })
+
+//获取添加关注推荐
+app.post('/getRecommend',(req,res) => {
+  var userId = req.body.userId
+  new Promise((resolve, reject) => {
+    userModel.find({_id: {$ne: objectId(userId)}},'nickname description photo gmt_create gmt_modified fansList articleList')
+    .populate('articleList')
+    .sort({gmt_modified: -1})
+    .then(result => {
+      resolve(result);
+    }).catch(e => {
+      reject(e)
+    })
+  }).then((result) => {
+      if(result.length!=0){
+          res.send({status:200,msg:'查询成功',data: result});
+      }else if(result.length == 0){
+          res.send({status:200,msg:'没有用户！'});
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！'});
+  })
+});
 
 module.exports = app;

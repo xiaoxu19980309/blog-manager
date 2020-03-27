@@ -220,28 +220,23 @@ app.post('/staticNum',(req,res) => {
     fansCount: 0
   }
   new Promise((resolve,reject)=>{
-    issuesModel.find({userId: objectId(id)},function(err,doc){
+    userModel.findOne({_id: objectId(id)}).populate('articleList').exec(function(err,doc){
       if(err) reject(err)
       resolve(doc)
     })
   }).then(result => {
     if(result){
-      param.number = result.length
-      result.forEach(element => {
+      param.number = result.articleList.length
+      result.articleList.forEach(element => {
         param.textCount += element.content_text.length
         param.likeCount += element.likesList.length
       });
+      param.fansCount = result.fansList.length
+      param.focusCount = result.focusList.length
+      res.send({status:200,msg:'获取成功！',data: param})
+    }else{
+      res.send({status:200,msg:'获取失败！'})
     }
-    userModel.findOne({_id: objectId(id)},function(err,doc){
-      if(err) res.send({status:200,msg:'获取失败！'})
-      if(doc) {
-        param.focusCount = doc.focusList.length
-        param.fansCount = doc.fansList.length
-        res.send({status:200,msg:'获取成功！',data: param})
-      }else {
-        res.send({status:200,msg:'获取失败！'})
-      }
-    })
   }).catch(err => {
     console.log(err)
   })

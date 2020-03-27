@@ -2,6 +2,7 @@ const JwtUtil = require('../../utils/jwt');
 var getTime = require('../../utils/time');
 var app = require("express").Router()
 const collectionModel = require('../models/collectionModel')
+const userModel = require('../models/userModel')
 const articleModel = require('../models/articleModel')
 const issuesModel = require('../models/issuesModel')
 const commentModel = require('../models/commentsModel')
@@ -39,7 +40,7 @@ app.post('/getCollections',(req,res) => {
   let jwt = new JwtUtil(token);
   let userId = jwt.verifyToken();
   new Promise((resolve, reject) => {
-    collectionModel.find({userId: objectId(userId)}).populate({path: 'articleList', match: {'articleList.$.has_publish': false}}).exec(function(err,result){
+    collectionModel.find({userId: objectId(userId)}).populate({path: 'articleList', match: {'has_publish': false}}).exec(function(err,result){
       if(err) reject(err)
       resolve(result)
     })
@@ -261,7 +262,10 @@ app.post('/insertIssue',(req,res) => {
       }).catch(e => {
         reject(e)
       })
-    }).then(() => {
+    }).then((document) => {
+      userModel.updateOne({_id: objectId(userId)},{$set: {gmt_modified: getTime()},$push: {articleList: objectId(document[0]._id)}},{session},function(err,doc){
+        if(err) session.abortTransaction()
+      })
       return new Promise((resolve, reject) => {
         articleModel.updateOne({_id: objectId(id)},{$set: {has_publish: true, gmt_modified: getTime()}},{session},function(err,result){
           if(err) session.abortTransaction()
