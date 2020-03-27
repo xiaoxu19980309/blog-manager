@@ -164,7 +164,7 @@ app.post('/getFocusList',(req,res) => {
   var id = req.body.userId
   new Promise((resolve, reject) => {
     userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
-    .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList'}})
+    .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
     .populate('fansList','nickname photo articleList fansList focusList')
     .then(result => {
       resolve(result);
@@ -173,7 +173,7 @@ app.post('/getFocusList',(req,res) => {
     })
   }).then((result) => {
       if(result.length!=0){
-          res.send({status:200,msg:'查询成功',data: result,count: result.length});
+          res.send({status:200,msg:'查询成功',data: result});
       }else if(result.length == 0){
           res.send({status:200,msg:'没有用户！'});
       }
@@ -181,6 +181,28 @@ app.post('/getFocusList',(req,res) => {
       res.send({status:500,msg:'查询失败！'});
   })
 });
+
+// 获取粉丝用户
+app.post('/getFansList',(req,res) => {
+  var id = req.body.userId
+  new Promise((resolve, reject) => {
+    userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+    .populate({path: 'fansList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
+    .then(result => {
+      resolve(result);
+    }).catch(e => {
+      reject(e)
+    })
+  }).then((result) => {
+      if(result.length!=0){
+          res.send({status:200,msg:'查询成功',data: result});
+      }else if(result.length == 0){
+          res.send({status:200,msg:'没有用户！'});
+      }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！'});
+  })
+})
 
 //关注用户
 app.post('/focusUser',(req,res)=>{

@@ -322,23 +322,29 @@ app.post('/getHomePage',(req,res) => {
     })
   } else if (type == 2) {
     new Promise((resolve, reject) => {
-      commentModel.find({userId: objectId(userId)}).limit(parseInt(limit))
+      commentModel.find({}).populate({path: 'articleId', match: {'userId': objectId(userId)}}).limit(parseInt(limit))
         .skip((page-1)*limit).sort({gmt_create: -1})
-        .populate('userId','nickname photo').populate('articleId')
+        .populate('userId','nickname photo')
         .then(res => {
           resolve(res);
         }).catch(e => {
           reject(e)
         })
       }).then((result) => {
+        var doc = []
         if(result){
           result.forEach(element => {
-            element.articleId.likesCount = element.articleId.likesList.length
-            element.articleId.commentsCount = element.articleId.commentList.length
+            if(element.articleId != null){
+              doc = doc.concat(element)
+            }
+          })
+          doc.forEach(element => {
+            element.articleId.likesCount = element.articleId?element.articleId.likesList.length:0
+            element.articleId.commentsCount = element.articleId?element.articleId.commentList.length:0
             element.articleId.likesList = []
             element.articleId.commentList = []
           })
-          res.send({status:200,msg:'获取成功！',data: result});
+          res.send({status:200,msg:'获取成功！',data: doc});
         }else{
           res.send({status:500,msg:'获取失败!'})
         }

@@ -67,7 +67,13 @@ app.post('/getLikedList',(req,res) => {
       resolve(result)
     })
   }).then((result) => {
-    res.send({status:200,msg:'查找成功！', data: result});
+    var doc = []
+    result.forEach(element => {
+      if(element.likesList.length!=0){
+        doc = doc.concat(element)
+      }
+    });
+    res.send({status:200,msg:'查找成功！', data: doc});
   }).catch((err) => {
       console.log(err);
       res.send({status:500,msg:'查找失败!'})
