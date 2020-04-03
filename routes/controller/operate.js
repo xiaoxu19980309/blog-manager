@@ -21,7 +21,6 @@ app.post('/insertLikes',(req,res) => {
           reject(e)
       })
     }).then(result => {
-      console.log(result)
       issuesModel.updateOne({_id: objectId(articleId)},{$push: {likesList: result[0]._id},
       $set: {gmt_modified: getTime()}},{session},function(err,doc){
         if(err) session.abortTransaction()
@@ -276,6 +275,65 @@ app.post('/getLikeList',(req,res) => {
   }).catch((err) => {
       console.log(err);
       res.send({status:500,msg:'查找失败!'})
+  })
+});
+
+//删除已发布的文章
+app.post('/deleteIssues',(req,res) => {
+  var id = req.body.id
+  var userId = req.body.userId
+  console.log(id,userId)
+  getSession().then((session) => {
+    console.log(1)
+    issuesModel.deleteOne({_id: objectId(id)},{session},function(err,result){
+      if(err) session.abortTransaction()
+      console.log(2)
+      userModel.updateOne({_id: objectId(userId)},{$pull: {articleList: objectId(id)},$set: {gmt_modified: getTime()}},{session},function(err,result2){
+        if(err) {
+          session.abortTransaction()
+          res.send({status:500,msg:"删除失败！"})
+        }
+        if(result2.nModified === 1){
+          session.commitTransaction().then(()=>{
+            session.endSession();
+          })
+          res.send({status:200,msg:'删除成功！'});
+        }else{
+          session.abortTransaction()
+          res.send({status:500,msg:"删除失败！"})
+        }
+      })
+    })
+  }).catch(e => {
+    console.log(e)
+  })
+});
+
+// 所有文章
+app.post('/getIssuesByTitle',(req,res) => {
+  var page = req.body.page;
+  var limit = req.body.limit;
+  var title = req.body.title
+  let reg = new RegExp(title, 'i')
+  new Promise((resolve, reject) => {
+    issuesModel.find({$or: [{title: {$regex: reg}}]}).populate('userId').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+      resolve(result);
+    }).catch(e => {
+      reject(e)
+    })
+  }).then((result) => {
+    if(result.length!=0){
+      issuesModel.find({}).estimatedDocumentCount(function(err,num){
+        if(err) res.send({status:200,msg:'查询失败！'});
+        if(num) {
+          res.send({status:200,msg:'查询成功',data: result,count: num});
+        }
+      })
+    }else if(result.length == 0){
+        res.send({status:200,msg:'没有结果！',count: 0});
+    }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！',count: 0});
   })
 });
 

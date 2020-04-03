@@ -12,17 +12,20 @@
 <body class="main_content">
   <form class="layui-form" onkeydown="if(event.keyCode==13){return false}">
     <div class="layui-form-item">
-      <label class="layui-form-label">用户名</label>
+      <label class="layui-form-label">专题名</label>
       <div class="layui-input-inline">
-        <input type="text" name="nickname" required placeholder="请输入用户名" autocomplete="off" class="layui-input">
+        <input type="text" name="name" required placeholder="请输入文章标题" autocomplete="off" class="layui-input">
       </div>
       <div>
-        <button type="button" class="layui-btn marginX20" lay-submit lay-filter="formDemo">查找</button>
+        <button type="button" class="layui-btn marginX20" lay-submit lay-filter="search">查找</button>
       </div>
     </div>
   </form>
-  <table class="layui-hide" id="test"></table>
-<script src="/layui/layui.js"></script>
+  <table class="layui-hide" id="test" lay-filter="table"></table>
+  <script type="text/html" id="bar">
+    <button class="layui-btn" name="delete" lay-filter="stat" lay-event="delete">删除</button>
+  </script>
+  <script src="/layui/layui.js"></script>
 <script>
 layui.use(['table','laytpl','form','layer'], function(){
   var table = layui.table;
@@ -35,10 +38,10 @@ layui.use(['table','laytpl','form','layer'], function(){
       location.href = '/'
     })
   }
-  function getData(param){
-    table.render({
+  function getData(param) {
+      table.render({
       elem: '#test'
-      ,url:'/api/user/getAllUsers'
+      ,url:'/api/subject/getSubjectList'
       ,page: true
       ,method: 'POST'
       ,headers: {token: JSON.parse(sessionStorage.getItem('user')).token}
@@ -48,22 +51,22 @@ layui.use(['table','laytpl','form','layer'], function(){
         msgName: 'msg',
         dataName: 'data',
       }
-      ,cellMinWidth: 80
       ,where: param
+      ,cellMinWidth: 80
       ,cols: [[
-        {field:'_id', width:150, title: 'ID'}
-        ,{field: 'nickname', width: 150, title: '昵称'}
+        ,{field: 'name', title: '专题名'}
+        ,{field:'', title: '作者',templet: function(d){
+          return d.userId.nickname
+        }}
+        ,{field:'', title: '文章数(篇)',templet: function(d){
+          return d.articleList.length
+        }}
+        ,{field:'', title: '粉丝数(人)',templet: function(d){
+          return d.fansList.length
+        }}
         ,{field:'gmt_create', title: '创建日期', minWidth: 100,sort: true}
         ,{field:'gmt_modified', title: '最后修改日期', sort: true}
-        ,{field:'', title: '管理员权限',templet: function(d){
-          var state = ''
-          if(d.isadmin){
-            state = '<input type="checkbox" name="switch" value='+d._id+' lay-skin="switch" lay-filter="stat" class="admin" checked>'
-          }else{
-            state = '<input type="checkbox" name="switch" value='+d._id+' lay-skin="switch" lay-filter="stat" class="admin">'
-          }
-          return state
-        }}
+        ,{field:'', title: '操作',toolbar: "#bar"}
       ]]
       ,done: function(res,curr,count){
         if(res.status == 403){
@@ -76,62 +79,55 @@ layui.use(['table','laytpl','form','layer'], function(){
     });
   }
   getData()
-  form.on('submit(formDemo)',function(data){
+  form.on('submit(search)',function(data){
     let param = {
-      name: data.field.nickname
+      title: data.field.name
     }
     getData(param)
   })
-  form.on('switch(stat)',function(data){
-    var context;
-    var sta;
-    var x = data.elem.checked;
-    if(x){
-      context = '打开'
-    }else{
-      context = '关闭'
-    }
-    layer.open({
-        content: "确定"+context+'管理员权限?',
+  table.on('tool(table)',function(obj){
+    var data = obj.data
+    var layEvent = obj.event
+    var tr = obj.tr
+    if(layEvent === 'delete'){
+      layer.open({
+        content: "确定删除该文章?",
         btn:['确定','取消'],
         yes: function(index, layero){
-          data.elem.checked = x;
-          console.log(data.elem.checked,'111')
           $.ajax({
             type: "POST",
-            url: "/api/user/changePow",
+            url: "/api/operate/deleteIssues",
             data: {
-              id: data.value,
-              isadmin: data.elem.checked
+              id: data._id,
+              userId: data.userId._id
             },
             headers: {
               token: JSON.parse(sessionStorage.getItem('user')).token
             },
             success: function(res){
               if(res.status == 200){
-                layer.msg(context+'成功',{icon: 1, time: 2000,});
+                layer.msg('删除成功',{icon: 1, time: 2000,});
               }else{
-                layer.msg(context+'失败',{icon: 2, time: 2000,});
+                layer.msg('删除失败',{icon: 2, time: 2000,});
               }
             },
             error: function(e){
-              layer.msg(context+'失败',{icon: 2, time: 2000,});
+              layer.msg('删除失败',{icon: 2, time: 2000,});
             }
           })
           form.render();
           layer.close(index);
         },
         btn2: function(index,layero){
-          data.elem.checked = !x
           form.render();
           layer.close(index)
         },
         cancel: function(){
-          data.elem.checked = !x
           form.render()
         }
       })
-      return false;
+    }
+    return false;
   })
 });
 </script>

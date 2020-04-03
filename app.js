@@ -10,8 +10,11 @@ var JwtUtil = require('./utils/jwt')
 
 var indexRouter = require('./routes/index');
 var homeRouter = require('./routes/home')
-var UserRouter = require('./routes/userManager')
+var UserRouter = require('./routes/manager/userManager')
+var articleRouter = require('./routes/manager/articleManager')
+var subjectRouter = require('./routes/manager/subjectManager')
 var usersRouter = require('./routes/users');
+
 var test = require('./routes/controller/test')
 var commonApi = require('./routes/controller/common')
 var userApi = require('./routes/controller/user')
@@ -36,6 +39,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/home',homeRouter);
 app.use('/home/userManager',UserRouter);
+app.use('/home/articleManager',articleRouter)
+app.use('/home/subjectManager',subjectRouter)
 app.use('/users', usersRouter);
 //设置跨域访问
 app.all('*', function(req, res, next) {

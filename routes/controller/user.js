@@ -10,18 +10,25 @@ const getSession = require('../../utils/session')
 app.post('/getAllUsers',(req,res) => {
   var page = req.body.page;
   var limit = req.body.limit;
+  var name = req.body.name
+  let reg = new RegExp(name, 'i')
   new Promise((resolve, reject) => {
-      userModel.find({},'_id username nickname gmt_create gmt_modified isadmin').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
-        resolve(result);
-      }).catch(e => {
-        reject(e)
-      })
+    userModel.find({$or: [{nickname: {$regex: reg}}]},'_id username nickname gmt_create gmt_modified isadmin').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+      resolve(result);
+    }).catch(e => {
+      reject(e)
+    })
   }).then((result) => {
-      if(result.length!=0){
-          res.send({status:200,msg:'查询成功',data: result,count: result.length});
-      }else if(result.length == 0){
-          res.send({status:200,msg:'没有用户！'});
-      }
+    if(result.length!=0){
+      userModel.find({}).count(function(err,num){
+        if(err) res.send({status:200,msg:'查询失败！'});
+        if(num) {
+          res.send({status:200,msg:'查询成功',data: result,count: num});
+        }
+      })
+    }else if(result.length == 0){
+        res.send({status:200,msg:'没有用户！'});
+    }
   }).catch((err) => {
       res.send({status:500,msg:'查询失败！'});
   })

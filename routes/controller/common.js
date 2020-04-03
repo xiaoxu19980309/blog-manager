@@ -94,6 +94,7 @@ app.post('/register',(req,res) => {
       }else{
         userModel.create({
           username: username, password: password, nickname: nickname,
+          isadmin: false,
           gmt_create: getTime(),gmt_modified: getTime()
         }).then(doc => {
           if(doc)
@@ -118,13 +119,18 @@ app.post('/find',(req,res) => {
     })
   }).then(result => {
     if(result){
+      let count = 0
       result.forEach(element => {
         element.commentsCount = element.commentList.length
         element.likesCount = element.likesList.length
         element.commentList = []
         element.likesList = []
       });
-      res.send({status:200,msg:'获取成功！',data:result})
+      issuesModel.find({}).estimatedDocumentCount(function(err,num){
+        if(err) res.send({status:500,msg:'获取失败!'})
+        count = num
+        res.send({status:200,msg:'获取成功！',data:result,count: count})
+      })
     }else{
       res.send({status:500,msg:'获取失败!'})
     }
