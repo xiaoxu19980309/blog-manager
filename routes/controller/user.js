@@ -20,7 +20,7 @@ app.post('/getAllUsers',(req,res) => {
     })
   }).then((result) => {
     if(result.length!=0){
-      userModel.find({}).count(function(err,num){
+      userModel.find({}).estimatedDocumentCount(function(err,num){
         if(err) res.send({status:200,msg:'查询失败！'});
         if(num) {
           res.send({status:200,msg:'查询成功',data: result,count: num});
@@ -173,6 +173,7 @@ app.post('/getFocusList',(req,res) => {
     userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
     .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
     .populate('fansList','nickname photo articleList fansList focusList')
+    .populate({path: 'focusSubject'})
     .then(result => {
       resolve(result);
     }).catch(e => {

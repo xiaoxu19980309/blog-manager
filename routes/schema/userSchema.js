@@ -13,6 +13,7 @@ let userSchema = new mongoose.Schema({
   photo: String,
   articleList: [{type: Schema.Types.ObjectId, ref: 'issues'}],
   focusList: [{type: Schema.Types.ObjectId, ref: 'users'}],
+  focusSubject: [{type: Schema.Types.ObjectId, ref: 'subjects'}],
   fansList: [{type:Schema.Types.ObjectId, ref: 'users'}],
   gmt_create: String,
   gmt_modified: String,

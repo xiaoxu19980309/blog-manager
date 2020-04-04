@@ -54,7 +54,7 @@ layui.use(['table','laytpl','form','layer'], function(){
       ,where: param
       ,cellMinWidth: 80
       ,cols: [[
-        ,{field: 'name', title: '专题名'}
+        {field: 'name', title: '专题名'}
         ,{field:'', title: '作者',templet: function(d){
           return d.userId.nickname
         }}
@@ -64,9 +64,9 @@ layui.use(['table','laytpl','form','layer'], function(){
         ,{field:'', title: '粉丝数(人)',templet: function(d){
           return d.fansList.length
         }}
-        ,{field:'gmt_create', title: '创建日期', minWidth: 100,sort: true}
+        ,{field:'gmt_create', title: '创建日期', sort: true}
         ,{field:'gmt_modified', title: '最后修改日期', sort: true}
-        ,{field:'', title: '操作',toolbar: "#bar"}
+        ,{field:'',title: '操作',toolbar: "#bar"}
       ]]
       ,done: function(res,curr,count){
         if(res.status == 403){
@@ -91,12 +91,12 @@ layui.use(['table','laytpl','form','layer'], function(){
     var tr = obj.tr
     if(layEvent === 'delete'){
       layer.open({
-        content: "确定删除该文章?",
+        content: "确定删除该专题?",
         btn:['确定','取消'],
         yes: function(index, layero){
           $.ajax({
             type: "POST",
-            url: "/api/operate/deleteIssues",
+            url: "/api/subject/deleteSubject",
             data: {
               id: data._id,
               userId: data.userId._id
@@ -107,6 +107,7 @@ layui.use(['table','laytpl','form','layer'], function(){
             success: function(res){
               if(res.status == 200){
                 layer.msg('删除成功',{icon: 1, time: 2000,});
+                getData()
               }else{
                 layer.msg('删除失败',{icon: 2, time: 2000,});
               }

@@ -2,6 +2,7 @@ const JwtUtil = require('../../utils/jwt');
 var getTime = require('../../utils/time');
 var app = require("express").Router()
 const collectionModel = require('../models/collectionModel')
+const subjectModel = require('../models/subjectModel')
 const userModel = require('../models/userModel')
 const articleModel = require('../models/articleModel')
 const issuesModel = require('../models/issuesModel')
@@ -60,7 +61,7 @@ app.post('/getCollections',(req,res) => {
 app.post('/getCollectionDetail',(req,res) => {
   let cid = req.body.cid
   new Promise((resolve, reject) => {
-    collectionModel.findOne({_id: objectId(cid)}).populate({path: 'articleList', match: {'has_publish': true}})
+    subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList', match: {'has_publish': true}})
     .populate('userId','nickname photo')
     .exec(function(err,result){
       if(err) reject(err)
