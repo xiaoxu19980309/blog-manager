@@ -52,7 +52,7 @@
               <dd class="userManager"><a href="javascript:;">用户管理</a></dd>
               <dd class="articleManager"><a href="javascript:;">文章管理</a></dd>
               <dd class="subjectManager"><a href="javascript:;">专题管理</a></dd>
-              <dd><a href="javascript:;">列表三</a></dd>
+              <dd class="contributionManager"><a href="javascript:;">专题文章管理</a></dd>
               <dd><a href="">超链接</a></dd>
             </dl>
           </li>
@@ -93,6 +93,9 @@
     })
     $('.subjectManager').click(function(){
       $('#mainPage').attr('src','/home/subjectManager')
+    })
+    $('.contributionManager').click(function(){
+      $('#mainPage').attr('src','/home/contributionManager')
     })
     // $('.test').click(function(){
     //   $('#mainPage').attr('src','/')

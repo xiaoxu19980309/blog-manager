@@ -15,6 +15,8 @@ let issuesSchema = new mongoose.Schema({
   likesList: [{
     type: Schema.Types.ObjectId, ref: 'likes'
   }],
+  subjectName: String,
+  subjectId: String,
   likesCount: Number,
   commentsCount: Number,
   noReprint: Boolean,

@@ -13,6 +13,7 @@ var homeRouter = require('./routes/home')
 var UserRouter = require('./routes/manager/userManager')
 var articleRouter = require('./routes/manager/articleManager')
 var subjectRouter = require('./routes/manager/subjectManager')
+var contributionRouter = require('./routes/manager/contributionManager')
 var usersRouter = require('./routes/users');
 
 var test = require('./routes/controller/test')
@@ -41,6 +42,7 @@ app.use('/home',homeRouter);
 app.use('/home/userManager',UserRouter);
 app.use('/home/articleManager',articleRouter)
 app.use('/home/subjectManager',subjectRouter)
+app.use('/home/contributionManager',contributionRouter)
 app.use('/users', usersRouter);
 //设置跨域访问
 app.all('*', function(req, res, next) {

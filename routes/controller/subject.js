@@ -136,6 +136,61 @@ app.post('/getSubjectList', (req, res) => {
   })
 })
 
+//管理员删除专题下文章
+app.post('/deleteSubArticle', (req, res) => {
+  var articleId = req.body.articleId
+  var subjectId = req.body.subjectId
+  new Promise((resolve, reject)=>{
+    subjectModel.updateOne({_id: objectId(subjectId)},{$pull: {articleList: objectId(articleId)},$set: {gmt_modified: getTime()}}).then(res => {
+      resolve(res)
+    }).catch(e => {
+      reject(e)
+    })
+  }).then(doc => {
+    if(doc.nModified === 1) {
+      res.send({status: 200,msg: '删除成功！'})
+    }else{
+      res.send({status: 500,msg: '删除失败！'})
+    }
+  })
+})
+
+//管理员获取专题文章列表
+app.post('/getSubjectArticleList', (req, res) => {
+  var name = req.body.name
+  var title = req.body.title
+  var limit = req.body.limit?req.body.limit:10
+  var page = req.body.page?req.body.page:1
+  let reg = new RegExp(name, 'i')
+  let regt = new RegExp(title,'i')
+  new Promise((resolve, reject)=>{
+    subjectModel.find({$or: [{name: {$regex: reg}}]}).populate({path: 'articleList',match: {$or: [{title: {$regex: regt}}]},populate: {path: 'userId',select: 'nickname photo'}}).then(res => {
+      resolve(res)
+    }).catch(e => {
+      reject(e)
+    })
+  }).then(doc => {
+    if(doc) {
+      let count = 0
+      let result = []
+      doc.forEach(element => {
+        if(element.articleList.length != 0) {
+          count += element.articleList.length
+          element.articleList.forEach(ele => {
+            ele.subjectName = element.name
+            ele.subjectId = element._id
+          })
+          result = result.concat(element.articleList)
+        }
+      });
+      let ans = result.slice((page-1)*limit,limit)
+      res.send({status: 200,msg: '获取专题文章列表成功！',data: ans,count:count})
+    }else{
+      res.send({status: 500,msg: '获取失败！'})
+    }
+  })
+})
+
 //获取推荐专题列表
 app.post('/getRecommondSubjects', (req, res) => {
   var userId = req.body.userId
@@ -173,15 +228,12 @@ app.post('/contributeSubject',(req,res) => {
       contributionModel.create([{userId: objectId(userId),articleId: objectId(articleId),isChecked: false,isPassed: false,
         subjectId: objectId(subjectId),gmt_create: getTime(),gmt_modified: getTime()}]).then(result2 => {
           if(result2) {
-            session.commitTransaction().then(()=>{
-              session.endSession()
-            })
             res.send({status: 200,msg: '投稿成功，请耐心等待审核~'})
           }else{
             res.send({status:500,msg:'投稿失败!'})
           }
       }).catch(err => {
-        session.abortTransaction()
+        console.log(err)
       })
     }
   }).catch(e => {
@@ -229,6 +281,27 @@ app.post('/getContributions',(req,res) => {
   var userId = req.body.userId
   new Promise((resolve,reject)=>{
     contributionModel.find({isChecked: false}).populate({path: 'subjectId',match: {'userId': objectId(userId)}})
+    .populate('articleId')
+    .populate('userId','nickname photo').exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result)=>{
+    if(result){
+      res.send({status: 200,msg: '获取成功！',data: result})
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch(e => {
+    console.log(e)
+  })
+})
+
+//获取审核结果列表
+app.post('/getContributionBack',(req,res) => {
+  var userId = req.body.userId
+  new Promise((resolve,reject)=>{
+    contributionModel.find({userId: objectId(userId), isChecked: true}).populate({path: 'subjectId'})
     .populate('articleId')
     .populate('userId','nickname photo').exec(function(err,result){
       if(err) reject(err)
