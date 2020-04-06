@@ -12,19 +12,13 @@
 <body class="main_content">
   <form class="layui-form" onkeydown="if(event.keyCode==13){return false}">
     <div class="layui-form-item">
-      <div class="layui-inline">
-        <label class="layui-form-label">专题名</label>
-        <div class="layui-input-inline">
-          <input type="text" name="name" required placeholder="请输入专题名" autocomplete="off" class="layui-input">
-        </div>
+      <label class="layui-form-label">专题名</label>
+      <div class="layui-input-inline">
+        <input type="text" name="name" required placeholder="请输入专题名" autocomplete="off" class="layui-input">
       </div>
-      <div class="layui-inline">
-        <label class="layui-form-label">文章标题</label>
-        <div class="layui-input-inline">
-          <input type="text" name="title" required placeholder="请输入文章标题" autocomplete="off" class="layui-input">
-        </div>
+      <div>
+        <button type="button" class="layui-btn marginX20" lay-submit lay-filter="search">查找</button>
       </div>
-      <button type="button" class="layui-btn marginX20" lay-submit lay-filter="search">查找</button>
     </div>
   </form>
   <table class="layui-hide" id="test" lay-filter="table"></table>
@@ -47,7 +41,7 @@ layui.use(['table','laytpl','form','layer'], function(){
   function getData(param) {
       table.render({
       elem: '#test'
-      ,url:'/api/subject/getSubjectArticleList'
+      ,url:'/api/subject/getContributionAll'
       ,page: true
       ,method: 'POST'
       ,headers: {token: JSON.parse(sessionStorage.getItem('user')).token}
@@ -60,19 +54,29 @@ layui.use(['table','laytpl','form','layer'], function(){
       ,where: param
       ,cellMinWidth: 80
       ,cols: [[
-        {field: 'subjectName', title: '专题名'}
-        ,{field: 'title', title: '文章标题'}
+        {field: '', title: '专题名',templet: function(d){
+          return d.subjectId.name
+        }}
+        ,{field:'', title: '文章标题',templet: function(d){
+          if(d.articleId){
+            return d.articleId.title
+          }else{
+            return '文章已删除'
+          }
+        }}
         ,{field:'', title: '作者',templet: function(d){
           return d.userId.nickname
         }}
-        ,{field:'', title: '评论数(条)',templet: function(d){
-          return d.commentList.length
+        ,{field:'', title: '审核结果',templet: function(d){
+          if(d.isChecked&&d.isPassed){
+            return '审核通过'
+          }else if(d.isChecked&&!d.isPassed){
+            return '审核拒绝'
+          }else if(!d.isChecked){
+            return '待审核'
+          }
         }}
-        ,{field:'', title: '喜欢数(个)',templet: function(d){
-          return d.likesList.length
-        }}
-        ,{field:'gmt_create', title: '创建日期', sort: true}
-        ,{field:'gmt_modified', title: '最后修改日期', sort: true}
+        ,{field:'gmt_create', title: '投稿时间', sort: true}
         ,{field:'',title: '操作',toolbar: "#bar"}
       ]]
       ,done: function(res,curr,count){
@@ -88,8 +92,7 @@ layui.use(['table','laytpl','form','layer'], function(){
   getData()
   form.on('submit(search)',function(data){
     let param = {
-      name: data.field.name,
-      title: data.field.title
+      name: data.field.name
     }
     getData(param)
   })
@@ -99,15 +102,14 @@ layui.use(['table','laytpl','form','layer'], function(){
     var tr = obj.tr
     if(layEvent === 'delete'){
       layer.open({
-        content: "确定删除该专题文章?",
+        content: "确定删除该记录?",
         btn:['确定','取消'],
         yes: function(index, layero){
           $.ajax({
             type: "POST",
-            url: "/api/subject/deleteSubArticle",
+            url: "/api/subject/deleteContribution",
             data: {
-              subjectId: data.subjectId,
-              articleId: data._id
+              id: data._id,
             },
             headers: {
               token: JSON.parse(sessionStorage.getItem('user')).token

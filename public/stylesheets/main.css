@@ -42,3 +42,7 @@ body{
 .main_content{
   padding: 30px 20px;
 }
+.photoImg{
+  width: 80px;
+  height: 80px;
+}

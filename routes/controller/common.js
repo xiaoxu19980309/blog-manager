@@ -4,7 +4,7 @@ var getTime = require('../../utils/time');
 var app = require("express").Router()
 const userModel = require('../models/userModel')
 const issuesModel = require('../models/issuesModel')
-// 导入连接模块
+var objectId = require('mongodb').ObjectId;
 
 // 登录
 app.post('/login',(req,res) => {
@@ -138,5 +138,27 @@ app.post('/find',(req,res) => {
     console.log(e)
   })
 })
+
+//获取文章内容
+app.post('/getArticle',(req,res) => {
+  let articleId = req.body.articleId
+  new Promise((resolve, reject) => {
+    issuesModel.findOne({_id: objectId(articleId)}).populate('userId','nickname photo')
+    .populate({path: 'commentList',populate: {path: 'userId replyList.userId',select: 'nickname photo'}})
+    .exec(function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
+  }).then((result) => {
+    if(result){
+      res.send({status:200,msg:'获取成功！',data: result});
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'获取失败!'})
+  })
+});
 
 module.exports = app;

@@ -218,10 +218,24 @@ app.post('/focusUser',(req,res)=>{
   var focusId = req.body.focusId
   getSession().then((session)=>{
     new Promise((resolve,reject) => {
-      userModel.updateOne({_id: objectId(userId)},{$push: {focusList: objectId(focusId)},$set: {gmt_modified: getTime()}},{session}).then(doc => {
-        resolve(doc)
-      }).catch(e => {
-        reject(e)
+      userModel.findOne({_id: objectId(userId)},function(err,result){
+        if(err) reject(err)
+        let flag = false
+        result.focusList.forEach(element => {
+          if(element == focusId){
+            flag = true
+          }
+        });
+        console.log(flag)
+        if(flag){
+          res.send({status:200,msg:'已关注该用户！'});
+        }else{
+          userModel.updateOne({_id: objectId(userId)},{$push: {focusList: objectId(focusId)},$set: {gmt_modified: getTime()}},{session}).then(doc => {
+            resolve(doc)
+          }).catch(e => {
+            reject(e)
+          })
+        }
       })
     }).then(doc => {
       if(doc.nModified === 1) {

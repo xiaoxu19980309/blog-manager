@@ -17,6 +17,7 @@ let issuesSchema = new mongoose.Schema({
   }],
   subjectName: String,
   subjectId: String,
+  isResend: Boolean,
   likesCount: Number,
   commentsCount: Number,
   noReprint: Boolean,

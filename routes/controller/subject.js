@@ -119,7 +119,7 @@ app.post('/getSubjectList', (req, res) => {
   var page = req.body.page?req.body.page:1
   let reg = new RegExp(name, 'i')
   new Promise((resolve, reject)=>{
-    subjectModel.find({$or: [{name: {$regex: reg}}]}).populate('userId').limit(parseInt(limit)).skip((page-1)*limit).then(res => {
+    subjectModel.find({$or: [{name: {$regex: reg}}]}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).then(res => {
       resolve(res)
     }).catch(e => {
       reject(e)
@@ -304,6 +304,67 @@ app.post('/getContributionBack',(req,res) => {
     contributionModel.find({userId: objectId(userId), isChecked: true}).populate({path: 'subjectId'})
     .populate('articleId')
     .populate('userId','nickname photo').exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result)=>{
+    if(result){
+      res.send({status: 200,msg: '获取成功！',data: result})
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch(e => {
+    console.log(e)
+  })
+})
+
+//管理员获取审核结果列表
+app.post('/getContributionAll',(req,res) => {
+  var name = req.body.name
+  var limit = req.body.limit?req.body.limit:10
+  var page = req.body.page?req.body.page:1
+  let reg = new RegExp(name, 'i')
+  new Promise((resolve,reject)=>{
+    contributionModel.find({}).populate({path: 'subjectId',match: {$or: [{name: {$regex: reg}}]}})
+    .populate('articleId').populate('userId','nickname photo')
+    .limit(parseInt(limit)).skip((page-1)*limit).exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result)=>{
+    let ans = []
+    let count = 0
+    new Promise((resolve,reject) => {
+      contributionModel.find({}).estimatedDocumentCount().then(result2 => {
+        resolve(result2)
+      }).catch(e => {
+        reject(e)
+      })
+    }).then(result2 => {
+      count = result2
+      result.forEach(element => {
+        if (element.subjectId) {
+          ans = ans.concat(element)
+        }
+      })
+      if(result){
+        res.send({status: 200,msg: '获取成功！',data: ans, count: count})
+      }else{
+        res.send({status:500,msg:'获取失败!'})
+      }
+    }).catch(err => {
+      console.log(err)
+    })
+  }).catch(e => {
+    console.log(e)
+  })
+})
+
+//管理员删除投稿记录
+app.post('/deleteContribution',(req,res) => {
+  var id = req.body.id
+  new Promise((resolve,reject)=>{
+    contributionModel.deleteOne({_id: objectId(id)},function(err,result){
       if(err) reject(err)
       resolve(result)
     })

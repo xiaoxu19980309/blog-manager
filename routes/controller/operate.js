@@ -327,7 +327,7 @@ app.post('/getIssuesByTitle',(req,res) => {
         }
       })
     }else if(result.length == 0){
-        res.send({status:200,msg:'没有结果！',count: 0});
+        res.send({status:200,msg:'没有结果！',count: 0,data: []});
     }
   }).catch((err) => {
       res.send({status:500,msg:'查询失败！',count: 0});

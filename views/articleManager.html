@@ -23,6 +23,7 @@
   </form>
   <table class="layui-hide" id="test" lay-filter="table"></table>
   <script type="text/html" id="bar">
+    <button class="layui-btn layui-btn-primary" name="read" lay-event="read">查看文章</button>
     <button class="layui-btn" name="delete" lay-filter="stat" lay-event="delete">删除</button>
   </script>
   <script src="/layui/layui.js"></script>
@@ -69,7 +70,7 @@ layui.use(['table','laytpl','form','layer'], function(){
         ,{field:'', title: '评论数(条)',templet: function(d){
           return d.commentList.length
         }}
-        ,{field:'', title: '操作',toolbar: "#bar"}
+        ,{field:'', title: '操作',width: 200,toolbar: "#bar"}
       ]]
       ,done: function(res,curr,count){
         if(res.status == 403){
@@ -110,6 +111,7 @@ layui.use(['table','laytpl','form','layer'], function(){
             success: function(res){
               if(res.status == 200){
                 layer.msg('删除成功',{icon: 1, time: 2000,});
+                getData()
               }else{
                 layer.msg('删除失败',{icon: 2, time: 2000,});
               }
@@ -121,6 +123,19 @@ layui.use(['table','laytpl','form','layer'], function(){
           form.render();
           layer.close(index);
         },
+        btn2: function(index,layero){
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          form.render()
+        }
+      })
+    }else if(layEvent === 'read'){
+      layer.open({
+        title: '文章内容',
+        content: data.content,
+        btn:['关闭'],
         btn2: function(index,layero){
           form.render();
           layer.close(index)

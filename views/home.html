@@ -49,11 +49,11 @@
           <li class="layui-nav-item layui-nav-itemed">
             <a class="" href="javascript:;">管理菜单</a>
             <dl class="layui-nav-child">
-              <dd class="userManager"><a href="javascript:;">用户管理</a></dd>
+              <!-- <dd class="userManager"><a href="javascript:;">用户管理</a></dd> -->
               <dd class="articleManager"><a href="javascript:;">文章管理</a></dd>
               <dd class="subjectManager"><a href="javascript:;">专题管理</a></dd>
-              <dd class="contributionManager"><a href="javascript:;">专题文章管理</a></dd>
-              <dd><a href="">超链接</a></dd>
+              <dd class="subjectArticleManager"><a href="javascript:;">专题文章管理</a></dd>
+              <dd class="contributionManager"><a href="javascript:;">投稿记录</a></dd>
             </dl>
           </li>
           <li class="layui-nav-item">
@@ -64,7 +64,7 @@
               <dd><a href="">超链接</a></dd>
             </dl>
           </li>
-          <!-- <li class="layui-nav-item userManager"><a href="javascript:;">用户管理</a></li> -->
+          <li class="layui-nav-item userManager"><a href="javascript:;">用户管理</a></li>
           <!-- <li class="layui-nav-item articleManager"><a href="javascript:;">文章管理</a></li> -->
         </ul>
       </div>
@@ -84,7 +84,6 @@
     var element = layui.element;
     var $ = layui.$
     var layer = layui.layer;
-
     $('.userManager').click(function(){
       $('#mainPage').attr('src','/home/userManager')
     })
@@ -93,6 +92,9 @@
     })
     $('.subjectManager').click(function(){
       $('#mainPage').attr('src','/home/subjectManager')
+    })
+    $('.subjectArticleManager').click(function(){
+      $('#mainPage').attr('src','/home/subjectArticleManager')
     })
     $('.contributionManager').click(function(){
       $('#mainPage').attr('src','/home/contributionManager')

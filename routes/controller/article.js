@@ -61,7 +61,7 @@ app.post('/getCollections',(req,res) => {
 app.post('/getCollectionDetail',(req,res) => {
   let cid = req.body.cid
   new Promise((resolve, reject) => {
-    subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList', match: {'has_publish': true}})
+    subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList'})
     .populate('userId','nickname photo')
     .exec(function(err,result){
       if(err) reject(err)
@@ -257,8 +257,8 @@ app.post('/insertIssue',(req,res) => {
   var content_text = req.body.content_text
   getSession().then((session) => {
     new Promise((resolve, reject) => {
-      issuesModel.create([{userId: objectId(userId),title: title,content: content,content_text:content_text, noReprint: false, gmt_create: getTime(), 
-        gmt_modified: getTime()}],{session}).then(res => {
+      issuesModel.create([{userId: objectId(userId),title: title,content: content,content_text:content_text, noReprint: false,
+        gmt_create: getTime(), gmt_modified: getTime(),isResend: false}],{session}).then(res => {
         resolve(res);
       }).catch(e => {
         reject(e)
@@ -377,29 +377,6 @@ app.post('/getHomePage',(req,res) => {
           res.send({status:500,msg:'获取失败!'})
       })
     }
-});
-
-//获取文章内容
-app.post('/getArticle',(req,res) => {
-  let articleId = req.body.articleId
-  new Promise((resolve, reject) => {
-    issuesModel.findOne({_id: objectId(articleId)}).populate('userId','nickname photo')
-    .populate({path: 'commentList',populate: {path: 'userId replyList.userId',select: 'nickname photo'}})
-    .exec(function(err,doc){
-      if(err) reject(err)
-      resolve(doc)
-    })
-  }).then((result) => {
-    
-    if(result){
-      res.send({status:200,msg:'获取成功！',data: result});
-    }else{
-      res.send({status:500,msg:'获取失败!'})
-    }
-  }).catch((err) => {
-      console.log(err);
-      res.send({status:500,msg:'获取失败!'})
-  })
 });
 
 //获取评论列表
@@ -523,6 +500,45 @@ app.post('/deleteReply',(req,res) => {
   }).catch((err) => {
       console.log(err);
       res.send({status:500,msg:'删除回复失败!'})
+  })
+});
+
+//转发文章
+app.post('/resendArticle',(req,res) => {
+  var userId = req.body.userId
+  var articleId = req.body.articleId
+  getSession().then((session) => {
+    new Promise((resolve, reject) => {
+      issuesModel.findOne({_id: objectId(articleId)},function(err,result){
+        if(err) reject(err)
+        resolve(result)
+      })
+    }).then((document) => {
+      new Promise((resolve,reject)=>{
+        issuesModel.create([{userId: objectId(userId),title: document.title,content: document.content,content_text:document.content_text,
+          noReprint: false,gmt_create: getTime(), gmt_modified: getTime(),isResend: true}],{session},function(err,result2){
+            if(err) reject(err)
+            resolve(result2)
+        })
+      }).then(result2 => {
+        userModel.updateOne({_id: objectId(userId)},{$set: {gmt_modified: getTime()},$push: {articleList: objectId(result2[0]._id)}},{session},function(err,doc){
+          if(err) session.abortTransaction()
+          if(doc.nModified === 1){
+            session.commitTransaction().then(()=>{
+              session.endSession()
+            }).catch(e => {})
+            res.send({status:200,msg:'转发成功！'});
+          }else{
+            session.abortTransaction()
+            res.send({status:500,msg:'转发失败!'})
+          }
+        })
+      })
+    }).catch((err) => {
+        res.send({status:500,msg:'转发失败！!'})
+    })
+  }).catch(e => {
+    console.log(e)
   })
 });
 
