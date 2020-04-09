@@ -3,6 +3,10 @@ var app = require("express").Router()
 var getTime = require('../../utils/time');
 var objectId = require('mongodb').ObjectId;
 const userModel = require('../models/userModel')
+const issueModel = require('../models/issuesModel')
+const contributionModel = require('../models/contributionModel')
+const subjectModel = require('../models/subjectModel')
+const storeModel = require('../models/storeModel')
 const feedbackModel = require('../models/feedbackModel')
 const getSession = require('../../utils/session')
 
@@ -13,7 +17,7 @@ app.post('/getAllUsers',(req,res) => {
   var name = req.body.name
   let reg = new RegExp(name, 'i')
   new Promise((resolve, reject) => {
-    userModel.find({$or: [{nickname: {$regex: reg}}]},'_id username nickname gmt_create gmt_modified isadmin').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+    userModel.find({$or: [{nickname: {$regex: reg}}]},'_id nickname gmt_create articleList fansList focusList isadmin photo description net sex phone').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
       resolve(result);
     }).catch(e => {
       reject(e)
@@ -52,6 +56,45 @@ app.post('/changePow',(req,res) => {
     }
   }).catch((err) => {
       res.send({status:500,msg:'修改失败！'});
+  })
+});
+
+//管理员删除用户
+app.post('/deleteUser',(req,res) => {
+  var id = req.body.userId;
+  getSession().then((session) => {
+    new Promise((resolve, reject) => {
+      userModel.deleteOne({_id: objectId(id)},{session}).then(res => {
+        resolve(res);
+      }).catch(e => {
+        reject(e)
+      })
+    }).then((result) => {
+      issueModel.deleteMany({userId: objectId(id)},{session},function(err,result2){
+        if(err) session.abortTransaction()
+      }).then(()=>{
+        contributionModel.deleteMany({userId: objectId(id)},{session},function(err,result3){
+          if(err) session.abortTransaction()
+        })
+      }).then(()=>{
+        subjectModel.deleteMany({userId: objectId(id)},{session},function(err,result4){
+          if(err) session.abortTransaction()
+        })
+      }).then(()=>{
+        storeModel.deleteMany({userId: objectId(id)},{session},function(err,result5){
+          if(err) session.abortTransaction()
+          if(result5){
+            session.commitTransaction().then(()=>{
+              session.endSession()
+            }).catch(()=>{})
+            res.send({status:200,msg:'删除成功',data: result});
+          }
+        })
+      })
+      res.send({status:500,msg:'删除失败',data: result});
+    }).catch((err) => {
+        res.send({status:500,msg:'删除失败！'});
+    })
   })
 });
 

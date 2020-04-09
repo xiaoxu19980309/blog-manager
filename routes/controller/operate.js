@@ -6,6 +6,7 @@ const userModel = require('../models/userModel')
 const issuesModel = require('../models/issuesModel')
 const LikeModel = require('../models/likesModel')
 const storeModel = require('../models/storeModel')
+const commentModel = require('../models/commentsModel')
 
 // 喜欢文章
 app.post('/insertLikes',(req,res) => {
@@ -350,6 +351,37 @@ app.post('/getPersonIssueTitle',(req,res) => {
   }).then((result) => {
     if(result.length!=0){
       issuesModel.find({}).estimatedDocumentCount(function(err,num){
+        if(err) res.send({status:200,msg:'查询失败！'});
+        if(num) {
+          res.send({status:200,msg:'查询成功',data: result,count: num});
+        }
+      })
+    }else if(result.length == 0){
+        res.send({status:200,msg:'没有结果！',count: 0});
+    }
+  }).catch((err) => {
+      res.send({status:500,msg:'查询失败！',count: 0});
+  })
+});
+
+// 搜索评论
+app.post('/getAllComments',(req,res) => {
+  var page = req.body.page?req.body.page:1
+  var limit = req.body.limit?req.body.limit:10
+  var word = req.body.word
+  var title = req.body.title
+  let reg1 = new RegExp(title, 'i')
+  let reg = new RegExp(word, 'i')
+  new Promise((resolve, reject) => {
+    commentModel.find({$or: [{content: {$regex: reg}}]}).populate({path: 'articleId',match: {$or: [{title: {$regex: reg1}}]}})
+    .populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).then(res => {
+      resolve(res)
+    }).catch(e => {
+      reject(e)
+    })
+  }).then((result) => {
+    if(result.length!=0){
+      commentModel.find({}).estimatedDocumentCount(function(err,num){
         if(err) res.send({status:200,msg:'查询失败！'});
         if(num) {
           res.send({status:200,msg:'查询成功',data: result,count: num});

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Layui</title>
+  <meta name="renderer" content="webkit">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="/layui/css/layui.css">
+  <link rel="stylesheet" href="/stylesheets/main.css">
+</head>
+<body class="main_content">
+  <form class="layui-form" onkeydown="if(event.keyCode==13){return false}">
+    <div class="layui-form-item">
+      <div class="layui-inline">
+        <label class="layui-form-label">文章标题</label>
+        <div class="layui-input-inline">
+          <input type="text" name="title" required placeholder="请输入文章标题" autocomplete="off" class="layui-input">
+        </div>
+      </div>
+      <div class="layui-inline">
+        <label class="layui-form-label">关键词</label>
+        <div class="layui-input-inline">
+          <input type="text" name="word" required placeholder="请输入关键词" autocomplete="off" class="layui-input">
+        </div>
+      </div>
+      <button type="button" class="layui-btn marginX20" lay-submit lay-filter="search">查找</button>
+    </div>
+  </form>
+  <table class="layui-hide" id="test" lay-filter="table"></table>
+  <script type="text/html" id="bar">
+    <button class="layui-btn layui-btn-primary" name="read" lay-event="read">查看</button>
+    <button class="layui-btn" name="delete" lay-filter="stat" lay-event="delete">删除</button>
+  </script>
+  <script src="/layui/layui.js"></script>
+<script>
+layui.use(['table','laytpl','form','layer'], function(){
+  var table = layui.table;
+  var laytpl = layui.laytpl;
+  var $ = layui.$;
+  var layer = layui.layer;
+  var form = layui.form;
+  if(!sessionStorage.getItem('user')){
+    layer.alert('登录过期,请重新登录！',function(){
+      location.href = '/'
+    })
+  }
+  function getData(param) {
+      table.render({
+      elem: '#test'
+      ,url:'/api/operate/getAllComments'
+      ,page: true
+      ,method: 'POST'
+      ,headers: {token: JSON.parse(sessionStorage.getItem('user')).token}
+      ,response: {
+        statusName: 'status',
+        statusCode: 200,
+        msgName: 'msg',
+        dataName: 'data',
+      }
+      ,where: param
+      ,cellMinWidth: 80
+      ,cols: [[
+        {field: '', title: '文章标题',templet: function(d){
+          if(d.articleId){
+            return d.articleId.title
+          }else{
+            return '"文章已删除"'
+          }
+        }}
+        ,{field:'', title: '评论人',templet: function(d){
+          return d.userId.nickname
+        }}
+        ,{field:'', title: '评论时间',templet: function(d){
+          return d.gmt_create
+        }}
+        ,{field:'', title: '回复数',templet: function(d){
+          return d.replyList.length
+        }}
+        ,{field:'',title: '操作',width: 180,toolbar: "#bar"}
+      ]]
+      ,done: function(res,curr,count){
+        if(res.status == 403){
+          layer.alert('登录过期,请重新登录！',function(){
+            sessionStorage.removeItem('user')
+            top.location.href = '/'
+          })
+        }
+      }
+    });
+  }
+  getData()
+  form.on('submit(search)',function(data){
+    let param = {
+      word: data.field.word,
+      title: data.field.title
+    }
+    getData(param)
+  })
+  table.on('tool(table)',function(obj){
+    var data = obj.data
+    var layEvent = obj.event
+    var tr = obj.tr
+    if(layEvent === 'delete'){
+      layer.open({
+        content: "确定删除该评论?",
+        btn:['确定','取消'],
+        yes: function(index, layero){
+          $.ajax({
+            type: "POST",
+            url: "/api/article/deleteComment",
+            data: {
+              id: data._id
+            },
+            headers: {
+              token: JSON.parse(sessionStorage.getItem('user')).token
+            },
+            success: function(res){
+              if(res.status == 200){
+                layer.msg('删除成功',{icon: 1, time: 2000,});
+                getData()
+              }else{
+                layer.msg('删除失败',{icon: 2, time: 2000,});
+              }
+            },
+            error: function(e){
+              layer.msg('删除失败',{icon: 2, time: 2000,});
+            }
+          })
+          form.render();
+          layer.close(index);
+        },
+        btn2: function(index,layero){
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          form.render()
+        }
+      })
+    }else if(layEvent === 'read'){
+      layer.open({
+        title: '评论内容',
+        content: data.content,
+        btn:['关闭'],
+        btn2: function(index,layero){
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          form.render()
+        }
+      })
+    }
+    return false;
+  })
+});
+</script>
+
+</body>
+</html>

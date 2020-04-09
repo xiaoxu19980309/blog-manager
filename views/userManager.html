@@ -12,16 +12,20 @@
 <body class="main_content">
   <form class="layui-form" onkeydown="if(event.keyCode==13){return false}">
     <div class="layui-form-item">
-      <label class="layui-form-label">用户名</label>
+      <label class="layui-form-label">昵称</label>
       <div class="layui-input-inline">
-        <input type="text" name="nickname" required placeholder="请输入用户名" autocomplete="off" class="layui-input">
+        <input type="text" name="nickname" required placeholder="请输入用户昵称" autocomplete="off" class="layui-input">
       </div>
       <div>
         <button type="button" class="layui-btn marginX20" lay-submit lay-filter="formDemo">查找</button>
       </div>
     </div>
   </form>
-  <table class="layui-hide" id="test"></table>
+  <table class="layui-hide" id="test" lay-filter="table"></table>
+  <script type="text/html" id="bar">
+    <button class="layui-btn layui-btn-primary" name="read" lay-event="read">查看</button>
+    <button class="layui-btn" name="delete" lay-filter="stat" lay-event="delete">删除</button>
+  </script>
 <script src="/layui/layui.js"></script>
 <script>
 layui.use(['table','laytpl','form','layer'], function(){
@@ -53,8 +57,20 @@ layui.use(['table','laytpl','form','layer'], function(){
       ,cols: [[
         {field:'_id', width:150, title: 'ID'}
         ,{field: 'nickname', width: 150, title: '昵称'}
+        ,{field: '',  title: '性别',templet: function(d){
+          if(d.sex){
+            return d.sex==1?'男':'女'
+          }else{
+            return '/'
+          }
+        }}
         ,{field:'gmt_create', title: '创建日期', minWidth: 100,sort: true}
-        ,{field:'gmt_modified', title: '最后修改日期', sort: true}
+        ,{field:'', title: '关注人数(人)', templet: function(d){
+          return d.focusList.length
+        }}
+        ,{field:'', title: '粉丝人数(人)', templet: function(d){
+          return d.fansList.length
+        }}
         ,{field:'', title: '管理员权限',templet: function(d){
           var state = ''
           if(d.isadmin){
@@ -64,6 +80,7 @@ layui.use(['table','laytpl','form','layer'], function(){
           }
           return state
         }}
+        ,{field:'',title: '操作',width: 150,toolbar: "#bar"}
       ]]
       ,done: function(res,curr,count){
         if(res.status == 403){
@@ -96,7 +113,6 @@ layui.use(['table','laytpl','form','layer'], function(){
         btn:['确定','取消'],
         yes: function(index, layero){
           data.elem.checked = x;
-          console.log(data.elem.checked,'111')
           $.ajax({
             type: "POST",
             url: "/api/user/changePow",
@@ -132,6 +148,65 @@ layui.use(['table','laytpl','form','layer'], function(){
         }
       })
       return false;
+  })
+  table.on('tool(table)',function(obj){
+    var data = obj.data
+    var layEvent = obj.event
+    var tr = obj.tr
+    if(layEvent === 'delete'){
+      layer.open({
+        content: "确定删除该用户(删除后无法找回)?",
+        btn:['确定','取消'],
+        yes: function(index, layero){
+          $.ajax({
+            type: "POST",
+            url: "/api/user/deleteUser",
+            data: {
+              userId: data._id
+            },
+            headers: {
+              token: JSON.parse(sessionStorage.getItem('user')).token
+            },
+            success: function(res){
+              if(res.status == 200){
+                layer.msg('删除成功',{icon: 1, time: 2000,});
+                getData()
+              }else{
+                layer.msg('删除失败',{icon: 2, time: 2000,});
+              }
+            },
+            error: function(e){
+              layer.msg('删除失败',{icon: 2, time: 2000,});
+            }
+          })
+          form.render();
+          layer.close(index);
+        },
+        btn2: function(index,layero){
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          form.render()
+        }
+      })
+    }else if(layEvent === 'read'){
+      let html = '<p>昵称：' + data.nickname + '</p>' + '<p>简介：' + data.description + '</p>' + '照片：' 
+      + '<img class="photoImg" src="'+data.photo+'" />'
+      layer.open({
+        title: '用户资料',
+        content: html,
+        btn:['关闭'],
+        btn2: function(index,layero){
+          form.render();
+          layer.close(index)
+        },
+        cancel: function(){
+          form.render()
+        }
+      })
+    }
+    return false;
   })
 });
 </script>
