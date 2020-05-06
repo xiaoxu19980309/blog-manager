@@ -343,7 +343,7 @@ app.post('/getPersonIssueTitle',(req,res) => {
   var userId = req.body.userId
   let reg = new RegExp(title, 'i')
   new Promise((resolve, reject) => {
-    issuesModel.find({$or: [{title: {$regex: reg},userId: objectId(userId)}]}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
+    issuesModel.find({$or: [{title: {$regex: reg},userId: objectId(userId) }]}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).then(result => {
       resolve(result);
     }).catch(e => {
       reject(e)
