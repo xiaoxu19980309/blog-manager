@@ -9,6 +9,7 @@ let articleSchema = new mongoose.Schema({
   content_text: String, // 内容文本
   has_publish: Boolean, // 是否已发表
   noReprint: Boolean, // 禁止转载
+  isDelete: Boolean, // 是否被删除
   gmt_create: String, // 创建时间
   gmt_modified: String, // 最后修改时间
 },{versionKey: false})

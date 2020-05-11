@@ -47,6 +47,21 @@ app.post('/getCollections',(req,res) => {
     })
   }).then((result) => {
     if(result){
+      var doc = []
+      var resultReturn = []
+      result.forEach(element => {
+        doc = []
+        if (element.articleList.length != 0) {
+          element.articleList.forEach(ele => {
+            if(ele.isDelete != true){
+              doc = doc.concat(ele)
+            }
+          })
+          console.log(doc)
+          element.articleList = doc
+        }
+        resultReturn = resultReturn.concat(element)
+      })
       res.send({status:200,msg:'获取成功！',data: result});
     }else{
       res.send({status:500,msg:'获取失败!'})
@@ -143,8 +158,9 @@ app.post('/insertArticle',(req,res) => {
   var content_text = req.body.content_text
   getSession().then((session)=>{
     new Promise((resolve, reject) => {
-      articleModel.create([{collectionId: objectId(collectionId),title: title,content: content,content_text: content_text, has_publish: false,
-        noReprint: false, gmt_create: getTime(), gmt_modified: getTime()}],{session}).then(res => {
+      articleModel.create([{collectionId: objectId(collectionId),title: title,content: content,content_text: content_text,
+        isDelete: false, has_publish: false,noReprint: false, gmt_create: getTime(),
+        gmt_modified: getTime()}],{session}).then(res => {
           resolve(res)
         }).catch(e => {
           reject(e)
@@ -221,28 +237,97 @@ app.post('/updateArticle',(req,res) => {
 // 删除文章
 app.post('/deleteArticle',(req,res) => {
   var id = req.body.id
+  new Promise((resolve,reject) => {
+    articleModel.updateOne({_id: objectId(id)}, {$set:{gmt_modified: getTime(), isDelete: true}}, function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then(result => {
+    if(result.nModified === 1){
+      res.send({status:200,msg:'删除成功！'});
+    }else{
+      res.send({status:500,msg:'删除失败!'})
+    }
+  }).catch(e => {
+    res.send({status:500,msg:'删除文章失败!'})
+  })
+  
+});
+
+// 彻底删除文章
+app.post('/deleteArticleGarbage',(req,res) => {
+  var id = req.body.id
   var collectionId = req.body.collectionId
   getSession().then((session) => {
-    articleModel.deleteOne({_id: objectId(id)},{session},function(err,result){
-      if(err) session.abortTransaction()
-      collectionModel.updateOne({_id: objectId(collectionId)},{$pull: {articleList:  objectId(id)}},{session},function(err,result2){
-        if(err) {
-          session.abortTransaction()
-          res.send({status:500,msg:"删除失败！"})
-        }
+    new Promise((resolve, reject) => {
+      articleModel.deleteOne({_id: objectId(id)}, {session}).then(res => {
+        resolve(res)
+      }).catch(e => {
+        reject(e)
+      })
+    }).then(result => {
+      return new Promise((resolve, reject) => {
+          collectionModel.updateOne({_id: objectId(collectionId)},{$pull: {articleList:  objectId(id)}},{session},function(err,result2){
+            if(err) session.abortTransaction()
+            resolve(result2)
+          })
+      }).then(result2 => {
         if(result2.nModified === 1){
           session.commitTransaction().then(()=>{
-            session.endSession();
-          })
+            session.endSession()
+          }).catch(e => {})
           res.send({status:200,msg:'删除成功！'});
         }else{
           session.abortTransaction()
-          res.send({status:500,msg:"删除失败！"})
+          res.send({status:500,msg:'删除失败!'})
         }
+      }).catch(e => {
+        console.log(e)
+        res.send({status:500,msg:'删除失败!'})
       })
+    }).catch(e => {
+      console.log(e)
     })
-  }).catch(e => {
-    console.log(e)
+  })
+});
+
+// 恢复文章
+app.post('/recoverArticle',(req,res) => {
+  var id = req.body.id
+  new Promise((resolve,reject) => {
+    articleModel.updateOne({_id: objectId(id)}, {$set:{gmt_modified: getTime(), isDelete: false}}, function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then(result => {
+      if(result){
+        res.send({status:200,msg:'恢复成功！'});
+      }else{
+        res.send({status:500,msg:'恢复失败!'})
+      }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'恢复失败!'})
+  })
+});
+
+// 获取回车站文章内容
+app.post('/getGarbage',(req,res) => {
+  var userId = req.body.userId
+  new Promise((resolve, reject) => {
+    articleModel.find({"isDelete": true}).populate({path: 'collectionId',select: 'userId',populate: {path: 'userId', match: {"_id": objectId(userId)}, select: 'nickname photo'}}).exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then((result) => {
+    if(result){
+      res.send({status:200,msg:'获取成功！',data: result});
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'获取失败!'})
   })
 });
 
