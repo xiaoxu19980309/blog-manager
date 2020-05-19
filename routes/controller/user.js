@@ -212,16 +212,37 @@ app.post('/getUserByName',(req,res) => {
 //获取关注用户列表
 app.post('/getFocusList',(req,res) => {
   var id = req.body.userId
+  var type = req.body.type
   new Promise((resolve, reject) => {
-    userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
-    .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
-    .populate('fansList','nickname photo articleList fansList focusList')
-    .populate({path: 'focusSubject'})
-    .then(result => {
-      resolve(result);
-    }).catch(e => {
-      reject(e)
-    })
+    if (type === 1) {
+      userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+      .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
+      .populate('fansList','nickname photo articleList fansList focusList')
+      .then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
+    } else if (type === 2) {
+      userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+      .populate('fansList','nickname photo articleList fansList focusList')
+      .populate({path: 'focusSubject'})
+      .then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
+    } else {
+      userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
+      .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
+      .populate('fansList','nickname photo articleList fansList focusList')
+      .populate({path: 'focusSubject'})
+      .then(result => {
+        resolve(result);
+      }).catch(e => {
+        reject(e)
+      })
+    }
   }).then((result) => {
       if(result.length!=0){
           res.send({status:200,msg:'查询成功',data: result});

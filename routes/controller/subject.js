@@ -49,6 +49,23 @@ app.post('/getSubjects', (req, res) => {
   })
 })
 
+//获取关注的专题列表
+app.post('/getLikedSubjects', (req, res) => {
+  var userId = req.body.userId
+  new Promise((resolve, reject)=>{
+    userModel.findOne({"_id": objectId(userId)},'nickname photo focusSubject').populate({path: 'focusSubject'}).exec(function(err,result){
+      if(err) reject(err)
+      resolve(result)
+    })
+  }).then(doc => {
+    if(doc) {
+      res.send({status: 200,msg: '获取喜欢的专题列表成功！',data: doc})
+    }else{
+      res.send({status: 500,msg: '获取失败！'})
+    }
+  })
+})
+
 //关注专题
 app.post('/focusSubject', (req, res) => {
   var userId = req.body.userId

@@ -5,12 +5,11 @@ var fs = require("fs");
 
 // var uploadFileDomin = location.origin
 
-//管理员登录
+// 图片上传
 app.post('/upload',multer.single('file'),function(req,res,next) {
   var fileName = req.file.filename;
   var destDir = '/public/images/temps'
   var sourceFile = req.file.path;
-  // console.log(fileName,'   ','    ',sourceFile)
   var destPath = path.join(__dirname.replace("routes\\controller", ""), destDir, fileName);
   var dest_Dir = path.join(__dirname.replace("routes\\controller", ""), destDir);
   var fileurl = 'http://localhost:3000/' + destPath.substr(destPath.indexOf("images"));

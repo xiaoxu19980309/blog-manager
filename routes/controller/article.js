@@ -57,7 +57,6 @@ app.post('/getCollections',(req,res) => {
               doc = doc.concat(ele)
             }
           })
-          console.log(doc)
           element.articleList = doc
         }
         resultReturn = resultReturn.concat(element)
@@ -75,13 +74,31 @@ app.post('/getCollections',(req,res) => {
 //获取文集详情
 app.post('/getCollectionDetail',(req,res) => {
   let cid = req.body.cid
+  let type = req.body.type
   new Promise((resolve, reject) => {
-    subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList'})
-    .populate('userId','nickname photo')
-    .exec(function(err,result){
-      if(err) reject(err)
-      resolve(result)
-    })
+    if(type == 1){
+      subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList',options: {sort:{'gmt_create': -1}}})
+      .populate('userId','nickname photo')
+      .exec(function(err,result){
+        if(err) reject(err)
+        resolve(result)
+      })
+    } else if (type == 2) {
+      subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList',options: {sort:{'gmt_modified': -1}}})
+      .populate('userId','nickname photo')
+      .exec(function(err,result){
+        if(err) reject(err)
+        resolve(result)
+      })
+    } else {
+      subjectModel.findOne({_id: objectId(cid)}).populate({path: 'articleList',options: {sort:{'likesList.length': -1}}})
+      .populate('userId','nickname photo')
+      .exec(function(err,result){
+        if(err) reject(err)
+        resolve(result)
+      })
+    }
+    
   }).then((result) => {
     if(result){
       res.send({status:200,msg:'获取成功！',data: result});
