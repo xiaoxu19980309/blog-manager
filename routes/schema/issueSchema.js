@@ -6,6 +6,7 @@ mongoose.set('useFindAndModify', false)
 
 let issuesSchema = new mongoose.Schema({
   userId: {type: Schema.Types.ObjectId,ref: 'users'}, // 用户ID
+  draftId: {type: Schema.Types.ObjectId,ref: 'articles'},// 草稿
   title: String, // 标题
   content: String, // 内容
   content_text: String, // 文本内容

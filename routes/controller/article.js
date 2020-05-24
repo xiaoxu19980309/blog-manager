@@ -215,15 +215,16 @@ app.post('/updateArticle',(req,res) => {
   var articleId = req.body.articleId
   var title = req.body.title
   var content = req.body.content
+  var content_text = req.body.content_text
   var noReprint = req.body.no_reprint
   new Promise((resolve, reject) => {
       if (title&&content) {
-        articleModel.updateOne({_id: objectId(articleId)},{$set:{title: title, content: content, gmt_modified: getTime()}},function(err,result){
+        articleModel.updateOne({_id: objectId(articleId)},{$set:{title: title, content: content,content_text:content_text, gmt_modified: getTime()}},function(err,result){
           if(err) reject(err)
           resolve(result);
         })
       } else if (!title&&content) {
-        articleModel.updateOne({_id: objectId(articleId)},{$set:{content: content, gmt_modified: getTime()}},function(err,result){
+        articleModel.updateOne({_id: objectId(articleId)},{$set:{content: content,content_text: content_text, gmt_modified: getTime()}},function(err,result){
           if(err) reject(err)
           resolve(result);
         })
@@ -359,7 +360,7 @@ app.post('/insertIssue',(req,res) => {
   var content_text = req.body.content_text
   getSession().then((session) => {
     new Promise((resolve, reject) => {
-      issuesModel.create([{userId: objectId(userId),title: title,content: content,content_text:content_text, noReprint: false,
+      issuesModel.create([{userId: objectId(userId),draftId: objectId(id),title: title,content: content,content_text:content_text, noReprint: false,
         gmt_create: getTime(), gmt_modified: getTime(),isResend: false}],{session}).then(res => {
         resolve(res);
       }).catch(e => {
@@ -382,9 +383,48 @@ app.post('/insertIssue',(req,res) => {
         }).catch(e => {})
         res.send({status:200,msg:'发布成功！'});
       }else{
-        session.abortTransaction()
         res.send({status:500,msg:'发布文章失败!'})
       }
+    }).catch((err) => {
+        console.log(err);
+        res.send({status:500,msg:'发布文章失败!'})
+    })
+  }).catch(e => {
+    console.log(e)
+  })
+});
+
+// 修改发布
+app.post('/editIssue',(req,res) => {
+  let userId = req.body.userId
+  var draftId = req.body.draftId
+  getSession().then((session) => {
+    new Promise((resolve, reject) => {
+      articleModel.findOne({_id: objectId(draftId)}).then(res => {
+        resolve(res);
+      }).catch(e => {
+        reject(e)
+      })
+    }).then((document) => {
+      issuesModel.updateOne({userId: objectId(userId),draftId: objectId(draftId)},{$set: {title: document.title,content: document.content,
+        content_text:document.content_text,noReprint: document.noReprint,gmt_modified: getTime()}},{session},function(err,doc){
+        if(err) session.abortTransaction()
+      })
+      return new Promise((resolve, reject) => {
+        articleModel.updateOne({_id: objectId(draftId)},{$set: {gmt_modified: getTime()}},{session},function(err,result){
+          if(err) session.abortTransaction()
+          resolve(result);
+        })
+      })
+    }).then((result) => {
+        if(result.nModified === 1){
+          session.commitTransaction().then(()=>{
+            session.endSession()
+          }).catch(e => {})
+          res.send({status:200,msg:'发布成功！'});
+        }else{
+          res.send({status:500,msg:'发布文章失败!'})
+        }
     }).catch((err) => {
         console.log(err);
         res.send({status:500,msg:'发布文章失败!'})
@@ -641,6 +681,55 @@ app.post('/resendArticle',(req,res) => {
     })
   }).catch(e => {
     console.log(e)
+  })
+});
+
+//根据文章id获取上一级文集
+app.post('/getCollArticle',(req,res) => {
+  let draftId = req.body.draftId
+  let userId = req.body.userId
+  new Promise((resolve, reject) => {
+    collectionModel.find({userId: objectId(userId)}).populate({path: 'articleList'})
+    .exec(function(err,doc){
+      if(err) reject(err)
+      resolve(doc)
+    })
+  }).then((result) => {
+    if(result){
+      var ans = null
+      var flag = false
+      var articles = []
+      if (result.length > 0) {
+        result.forEach(element => {
+          if(element.articleList.length>0){
+            element.articleList.forEach(ele => {
+              if(ele._id == draftId) {
+                flag = true
+                article = ele
+              }
+            })
+            if(flag){
+              ans = element
+            }
+          }
+        })
+        ans.articleList.forEach(ele => {
+          if (ele.has_publish && ele._id == draftId) {
+            articles = articles.concat(ele)
+          }
+          if (!ele.has_publish) {
+            articles = articles.concat(ele)
+          }
+        })
+        ans.articleList = articles
+        res.send({status:200,msg:'获取成功！',data: ans});
+      }
+    }else{
+      res.send({status:500,msg:'获取失败!'})
+    }
+  }).catch((err) => {
+      console.log(err);
+      res.send({status:500,msg:'获取失败!'})
   })
 });
 
