@@ -111,7 +111,7 @@ app.post('/find',(req,res) => {
   var limit = req.body.limit? req.body.limit : 10
   var page = req.body.page? req.body.page : 1
   new Promise((resolve,reject)=>{
-    issuesModel.find({}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).exec(function(err,doc){
+    issuesModel.find({}).populate('userId','nickname photo').limit(parseInt(limit)).skip((page-1)*limit).sort({"gmt_create": -1}).exec(function(err,doc){
       if(err) reject(err)
       resolve(doc)
     })

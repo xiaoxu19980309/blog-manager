@@ -236,7 +236,7 @@ app.post('/getFocusList',(req,res) => {
       userModel.findOne({_id: objectId(id)},'nickname photo gmt_create gmt_modified focusList')
       .populate({path: 'focusList',select: 'nickname photo articleList fansList focusList',populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
       .populate('fansList','nickname photo articleList fansList focusList')
-      .populate({path: 'focusSubject'})
+      .populate({path: 'focusSubject', populate: {path: 'articleList',populate: {path: 'userId', select: 'nickname photo'}}})
       .then(result => {
         resolve(result);
       }).catch(e => {

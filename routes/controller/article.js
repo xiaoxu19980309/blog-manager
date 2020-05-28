@@ -706,18 +706,16 @@ app.post('/getCollArticle',(req,res) => {
               if(ele._id == draftId) {
                 flag = true
                 article = ele
+                ans = element
               }
             })
-            if(flag){
-              ans = element
-            }
           }
         })
         ans.articleList.forEach(ele => {
           if (ele.has_publish && ele._id == draftId) {
             articles = articles.concat(ele)
           }
-          if (!ele.has_publish) {
+          if (!ele.has_publish&&!ele.isDelete) {
             articles = articles.concat(ele)
           }
         })
