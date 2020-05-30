@@ -276,7 +276,6 @@ app.post('/contributeCheck',(req,res) => {
         subjectModel.updateOne({_id: objectId(subjectId)},{$push: {articleList: objectId(articleId)},$set: {gmt_modified: getTime()}}
         ,{session},function(err,result2){
           if(err) session.abortTransaction()
-          console.log(result2)
           if(result2.nModified === 1){
             session.commitTransaction().then(()=>{
               session.endSession();
@@ -305,7 +304,13 @@ app.post('/getContributions',(req,res) => {
     })
   }).then((result)=>{
     if(result){
-      res.send({status: 200,msg: '获取成功！',data: result})
+      ans = []
+      result.forEach(item => {
+        if(item.subjectId){
+          ans = ans.concat(item)
+        }
+      })
+      res.send({status: 200,msg: '获取成功！',data: ans})
     }else{
       res.send({status:500,msg:'获取失败!'})
     }
